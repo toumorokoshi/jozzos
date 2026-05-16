@@ -34,8 +34,13 @@ export default defineConfig(({ mode }) => {
               console.log(
                 `[Proxy] Forwarding to: ${proxyReq.method} ${currentTarget}${proxyReq.path}`,
               );
-              console.log("[Proxy] Forwarded headers:", proxyReq.getHeaders());
+
+              // Update headers for Jira Cloud compatibility
+              proxyReq.setHeader("Host", domain);
               proxyReq.setHeader("Origin", currentTarget);
+              proxyReq.removeHeader("referer");
+
+              console.log("[Proxy] Forwarded headers:", proxyReq.getHeaders());
             });
             proxy.on("proxyRes", (proxyRes, req) => {
               console.log(
