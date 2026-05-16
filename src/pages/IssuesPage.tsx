@@ -827,43 +827,6 @@ export const IssuesPage: React.FC = () => {
                   gap: "1.5rem",
                 }}
               >
-                <div>
-                  <h3
-                    style={{
-                      fontSize: "0.85rem",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.05em",
-                      color: "var(--text-secondary)",
-                      marginBottom: "0.5rem",
-                      borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
-                      paddingBottom: "0.25rem",
-                    }}
-                  >
-                    Description
-                  </h3>
-                  <div
-                    style={{
-                      color: "var(--text-primary)",
-                      fontSize: "0.95rem",
-                      lineHeight: "1.6",
-                      padding: "0.5rem 0",
-                    }}
-                  >
-                    {selectedIssue.description ? (
-                      renderADFContent(selectedIssue.description)
-                    ) : (
-                      <span
-                        style={{
-                          color: "var(--text-secondary)",
-                          fontStyle: "italic",
-                        }}
-                      >
-                        No description provided.
-                      </span>
-                    )}
-                  </div>
-                </div>
-
                 {/* Dependencies Section */}
                 {((selectedIssue.blockedBy &&
                   selectedIssue.blockedBy.length > 0) ||
@@ -871,7 +834,7 @@ export const IssuesPage: React.FC = () => {
                     selectedIssue.blocks.length > 0)) && (
                   <div
                     style={{
-                      marginTop: "1rem",
+                      marginTop: "0.5rem",
                       display: "flex",
                       flexDirection: "column",
                       gap: "1.5rem",
@@ -1170,13 +1133,50 @@ export const IssuesPage: React.FC = () => {
                               padding: "0.5rem 0",
                             }}
                           >
-                            Doesn\'t block other issues.
+                            Doesn't block other issues.
                           </div>
                         )}
                       </div>
                     </div>
                   </div>
                 )}
+
+                <div>
+                  <h3
+                    style={{
+                      fontSize: "0.85rem",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                      color: "var(--text-secondary)",
+                      marginBottom: "0.5rem",
+                      borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
+                      paddingBottom: "0.25rem",
+                    }}
+                  >
+                    Description
+                  </h3>
+                  <div
+                    style={{
+                      color: "var(--text-primary)",
+                      fontSize: "0.95rem",
+                      lineHeight: "1.6",
+                      padding: "0.5rem 0",
+                    }}
+                  >
+                    {selectedIssue.description ? (
+                      renderADFContent(selectedIssue.description)
+                    ) : (
+                      <span
+                        style={{
+                          color: "var(--text-secondary)",
+                          fontStyle: "italic",
+                        }}
+                      >
+                        No description provided.
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
 
               {/* Sidebar Info (Right Side) */}
@@ -1358,7 +1358,7 @@ export const IssuesPage: React.FC = () => {
                 {/* Dates */}
                 <div
                   style={{
-                    marginTop: "auto",
+                    marginTop: "1.5rem",
                     paddingTop: "1rem",
                     borderTop: "1px solid var(--border-color)",
                   }}
