@@ -17,8 +17,17 @@ export default defineConfig(({ mode }) => {
           rewrite: (path) => path.replace(/^\/api\/jira/, ""),
           // Need to ensure the Origin header matches the target for Jira
           configure: (proxy) => {
-            proxy.on("proxyReq", (proxyReq) => {
+            proxy.on("proxyReq", (proxyReq, req) => {
+              console.log(`[Proxy] Incoming request: ${req.method} ${req.url}`);
+              console.log(
+                `[Proxy] Forwarding to: ${proxyReq.method} ${targetUrl}${proxyReq.path}`,
+              );
               proxyReq.setHeader("Origin", targetUrl);
+            });
+            proxy.on("proxyRes", (proxyRes, req) => {
+              console.log(
+                `[Proxy] Response from Jira: ${proxyRes.statusCode} for ${req.url}`,
+              );
             });
           },
         },
