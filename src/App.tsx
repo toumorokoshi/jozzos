@@ -15,9 +15,11 @@ function App() {
       setError("Please enter a Filter ID or JQL");
       return;
     }
-    
+
     if (apiKey && !userEmail) {
-      setError("Jira Cloud requires your Email address when using an API Key (Basic Auth). Please provide your Jira Email.");
+      setError(
+        "Jira Cloud requires your Email address when using an API Key (Basic Auth). Please provide your Jira Email.",
+      );
       return;
     }
 

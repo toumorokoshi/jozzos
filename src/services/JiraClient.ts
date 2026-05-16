@@ -32,7 +32,7 @@ export const getIssuesByFilter = async (
     jql = `filter=${filterIdOrJql}`;
   }
 
-  const url = `${baseUri}/rest/api/3/search?jql=${encodeURIComponent(jql)}`;
+  const url = `${baseUri}/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&fields=summary,status,assignee,reporter`;
 
   const response = await fetch(url, {
     method: "GET",
