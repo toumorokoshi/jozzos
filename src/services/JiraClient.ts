@@ -71,7 +71,7 @@ export const getIssuesByFilter = async (
       status: issue.fields?.status?.name || "Unknown",
       assignee: issue.fields?.assignee?.displayName,
       reporter: issue.fields?.reporter?.displayName,
-      url: `/browse/${issue.key}`, // Appended onto the base Jira URL in the UI
+      url: `https://${config.jiraDomain}/browse/${issue.key}`,
     }),
   );
 };

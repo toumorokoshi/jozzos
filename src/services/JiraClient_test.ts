@@ -58,7 +58,7 @@ describe("JiraClient", () => {
       status: "In Progress",
       assignee: "John Doe",
       reporter: "Jane Doe",
-      url: "/browse/TEST-1",
+      url: "https://test-domain.atlassian.net/browse/TEST-1",
     });
   });
 
