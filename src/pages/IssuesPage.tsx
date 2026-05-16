@@ -354,28 +354,50 @@ export const IssuesPage: React.FC = () => {
                           issue.blockingIssues.length > 0 && (
                             <button
                               onClick={() => toggleExpand(issue.id)}
+                              aria-label={
+                                expandedIssues.has(issue.id)
+                                  ? "Collapse blockers"
+                                  : "Expand blockers"
+                              }
+                              title={
+                                expandedIssues.has(issue.id)
+                                  ? "Collapse blockers"
+                                  : "Expand blockers"
+                              }
                               style={{
                                 background: "none",
                                 border: "none",
-                                color: "var(--text-secondary)",
+                                color: "var(--accent-secondary)",
                                 cursor: "pointer",
-                                padding: "4px",
+                                padding: "8px",
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
-                                transition: "transform 0.2s ease",
+                                transition: "all 0.2s ease",
                                 transform: expandedIssues.has(issue.id)
                                   ? "rotate(90deg)"
                                   : "rotate(0deg)",
+                                borderRadius: "4px",
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background =
+                                  "rgba(102, 252, 241, 0.1)";
+                                e.currentTarget.style.color =
+                                  "var(--text-primary)";
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = "none";
+                                e.currentTarget.style.color =
+                                  "var(--accent-secondary)";
                               }}
                             >
                               <svg
-                                width="12"
-                                height="12"
+                                width="16"
+                                height="16"
                                 viewBox="0 0 24 24"
                                 fill="none"
                                 stroke="currentColor"
-                                strokeWidth="3"
+                                strokeWidth="3.5"
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
                               >

@@ -96,10 +96,12 @@ export const getIssuesByFilter = async (
 
   return data.issues.map((issue: JiraIssueResponse) => {
     const blockingIssues: Issue[] = (issue.fields?.issuelinks || [])
-      .filter(
-        (link: JiraIssueLink) =>
-          link.inwardIssue && link.type.name === "Blocks",
-      )
+      .filter((link: JiraIssueLink) => {
+        if (!link.inwardIssue) return false;
+        const typeName = link.type.name.toLowerCase();
+        const inwardDesc = link.type.inward.toLowerCase();
+        return typeName === "blocks" || inwardDesc.includes("blocked by");
+      })
       .map((link: JiraIssueLink) => {
         const inward = link.inwardIssue!;
         return {
