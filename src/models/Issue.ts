@@ -6,6 +6,7 @@ export interface Issue {
   assignee?: string;
   reporter?: string;
   url: string;
+  blockingIssues?: Issue[];
 }
 
 export interface IssueTrackerConfig {

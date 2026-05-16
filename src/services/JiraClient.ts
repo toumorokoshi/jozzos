@@ -20,6 +20,44 @@ const getAuthHeaders = (config: IssueTrackerConfig): HeadersInit => {
   return headers;
 };
 
+interface JiraIssueLink {
+  id: string;
+  type: {
+    id: string;
+    name: string;
+    inward: string;
+    outward: string;
+  };
+  inwardIssue?: {
+    id: string;
+    key: string;
+    fields?: {
+      summary?: string;
+      status?: { name?: string };
+    };
+  };
+  outwardIssue?: {
+    id: string;
+    key: string;
+    fields?: {
+      summary?: string;
+      status?: { name?: string };
+    };
+  };
+}
+
+interface JiraIssueResponse {
+  id: string;
+  key: string;
+  fields?: {
+    summary?: string;
+    status?: { name?: string };
+    assignee?: { displayName?: string };
+    reporter?: { displayName?: string };
+    issuelinks?: JiraIssueLink[];
+  };
+}
+
 export const getIssuesByFilter = async (
   config: IssueTrackerConfig,
   filterIdOrJql: string,
@@ -33,7 +71,9 @@ export const getIssuesByFilter = async (
     jql = `filter=${filterIdOrJql}`;
   }
 
-  const url = `${baseUri}/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&fields=summary,status,assignee,reporter`;
+  const url = `${baseUri}/rest/api/3/search/jql?jql=${encodeURIComponent(
+    jql,
+  )}&fields=summary,status,assignee,reporter,issuelinks`;
 
   const headers = getAuthHeaders(config) as Record<string, string>;
   if (useProxy && config.jiraDomain) {
@@ -54,17 +94,24 @@ export const getIssuesByFilter = async (
 
   const data = await response.json();
 
-  return data.issues.map(
-    (issue: {
-      id: string;
-      key: string;
-      fields?: {
-        summary?: string;
-        status?: { name?: string };
-        assignee?: { displayName?: string };
-        reporter?: { displayName?: string };
-      };
-    }) => ({
+  return data.issues.map((issue: JiraIssueResponse) => {
+    const blockingIssues: Issue[] = (issue.fields?.issuelinks || [])
+      .filter(
+        (link: JiraIssueLink) =>
+          link.inwardIssue && link.type.name === "Blocks",
+      )
+      .map((link: JiraIssueLink) => {
+        const inward = link.inwardIssue!;
+        return {
+          id: inward.id,
+          key: inward.key,
+          summary: inward.fields?.summary || "No Summary",
+          status: inward.fields?.status?.name || "Unknown",
+          url: `https://${config.jiraDomain}/browse/${inward.key}`,
+        };
+      });
+
+    return {
       id: issue.id,
       key: issue.key,
       summary: issue.fields?.summary || "No Summary",
@@ -72,6 +119,7 @@ export const getIssuesByFilter = async (
       assignee: issue.fields?.assignee?.displayName,
       reporter: issue.fields?.reporter?.displayName,
       url: `https://${config.jiraDomain}/browse/${issue.key}`,
-    }),
-  );
+      blockingIssues: blockingIssues.length > 0 ? blockingIssues : undefined,
+    };
+  });
 };

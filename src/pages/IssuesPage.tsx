@@ -11,6 +11,20 @@ export const IssuesPage: React.FC = () => {
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [expandedIssues, setExpandedIssues] = useState<Set<string>>(new Set());
+
+  const toggleExpand = (issueId: string) => {
+    setExpandedIssues((prev) => {
+      const next = new Set(prev);
+      if (next.has(issueId)) {
+        next.delete(issueId);
+      } else {
+        next.add(issueId);
+      }
+      return next;
+    });
+  };
+
   const [queryHistory, setQueryHistory] = useState<string[]>(() => {
     const saved = localStorage.getItem("jozzos_query_history");
     if (saved) {
@@ -224,6 +238,14 @@ export const IssuesPage: React.FC = () => {
               <tr>
                 <th
                   style={{
+                    padding: "0.5rem 0.5rem",
+                    borderBottom: "1px solid var(--border-color)",
+                    width: "40px",
+                    textAlign: "center",
+                  }}
+                ></th>
+                <th
+                  style={{
                     padding: "0.5rem 1rem",
                     borderBottom: "1px solid var(--border-color)",
                     width: "120px",
@@ -272,7 +294,7 @@ export const IssuesPage: React.FC = () => {
               {issues.length === 0 && !loading && (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     style={{
                       padding: "2rem",
                       textAlign: "center",
@@ -286,7 +308,7 @@ export const IssuesPage: React.FC = () => {
               {loading && (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     style={{ padding: "2rem", textAlign: "center" }}
                   >
                     <div
@@ -306,79 +328,191 @@ export const IssuesPage: React.FC = () => {
               )}
               {!loading &&
                 issues.map((issue) => (
-                  <tr
-                    key={issue.id}
-                    style={{
-                      borderBottom: "1px solid var(--border-color)",
-                      background: "rgba(11, 12, 16, 0.4)",
-                      transition: "background var(--transition-fast)",
-                    }}
-                    onMouseEnter={(e) =>
-                      (e.currentTarget.style.background =
-                        "rgba(11, 12, 16, 0.8)")
-                    }
-                    onMouseLeave={(e) =>
-                      (e.currentTarget.style.background =
-                        "rgba(11, 12, 16, 0.4)")
-                    }
-                  >
-                    <td style={{ padding: "0.5rem 1rem" }}>
-                      <a
-                        href={issue.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                  <React.Fragment key={issue.id}>
+                    <tr
+                      style={{
+                        borderBottom: "1px solid var(--border-color)",
+                        background: "rgba(11, 12, 16, 0.4)",
+                        transition: "background var(--transition-fast)",
+                      }}
+                      onMouseEnter={(e) =>
+                        (e.currentTarget.style.background =
+                          "rgba(11, 12, 16, 0.8)")
+                      }
+                      onMouseLeave={(e) =>
+                        (e.currentTarget.style.background =
+                          "rgba(11, 12, 16, 0.4)")
+                      }
+                    >
+                      <td
                         style={{
-                          color: "var(--accent-secondary)",
-                          textDecoration: "none",
-                          fontWeight: "500",
+                          padding: "0.5rem 0.5rem",
+                          textAlign: "center",
                         }}
                       >
-                        {issue.key}
-                      </a>
-                    </td>
-                    <td
-                      style={{
-                        padding: "0.5rem 1rem",
-                        color: "var(--text-primary)",
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        maxWidth: "400px",
-                      }}
-                    >
-                      {issue.summary}
-                    </td>
-                    <td style={{ padding: "0.5rem 1rem" }}>
-                      <span
+                        {issue.blockingIssues &&
+                          issue.blockingIssues.length > 0 && (
+                            <button
+                              onClick={() => toggleExpand(issue.id)}
+                              style={{
+                                background: "none",
+                                border: "none",
+                                color: "var(--text-secondary)",
+                                cursor: "pointer",
+                                padding: "4px",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                transition: "transform 0.2s ease",
+                                transform: expandedIssues.has(issue.id)
+                                  ? "rotate(90deg)"
+                                  : "rotate(0deg)",
+                              }}
+                            >
+                              <svg
+                                width="12"
+                                height="12"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="3"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                              </svg>
+                            </button>
+                          )}
+                      </td>
+                      <td style={{ padding: "0.5rem 1rem" }}>
+                        <a
+                          href={issue.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            color: "var(--accent-secondary)",
+                            textDecoration: "none",
+                            fontWeight: "500",
+                          }}
+                        >
+                          {issue.key}
+                        </a>
+                      </td>
+                      <td
                         style={{
-                          background: "var(--accent-primary)",
-                          color: "var(--bg-primary)",
-                          padding: "0.1rem 0.5rem",
-                          borderRadius: "4px",
-                          fontSize: "0.75rem",
-                          fontWeight: "600",
+                          padding: "0.5rem 1rem",
+                          color: "var(--text-primary)",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          maxWidth: "400px",
                         }}
                       >
-                        {issue.status}
-                      </span>
-                    </td>
-                    <td
-                      style={{
-                        padding: "0.5rem 1rem",
-                        color: "var(--text-secondary)",
-                      }}
-                    >
-                      {issue.assignee || "-"}
-                    </td>
-                    <td
-                      style={{
-                        padding: "0.5rem 1rem",
-                        color: "var(--text-secondary)",
-                      }}
-                    >
-                      {issue.reporter || "-"}
-                    </td>
-                  </tr>
+                        {issue.summary}
+                      </td>
+                      <td style={{ padding: "0.5rem 1rem" }}>
+                        <span
+                          style={{
+                            background: "var(--accent-primary)",
+                            color: "var(--bg-primary)",
+                            padding: "0.1rem 0.5rem",
+                            borderRadius: "4px",
+                            fontSize: "0.75rem",
+                            fontWeight: "600",
+                          }}
+                        >
+                          {issue.status}
+                        </span>
+                      </td>
+                      <td
+                        style={{
+                          padding: "0.5rem 1rem",
+                          color: "var(--text-secondary)",
+                        }}
+                      >
+                        {issue.assignee || "-"}
+                      </td>
+                      <td
+                        style={{
+                          padding: "0.5rem 1rem",
+                          color: "var(--text-secondary)",
+                        }}
+                      >
+                        {issue.reporter || "-"}
+                      </td>
+                    </tr>
+                    {expandedIssues.has(issue.id) &&
+                      issue.blockingIssues?.map((blocker) => (
+                        <tr
+                          key={`${issue.id}-blocking-${blocker.id}`}
+                          style={{
+                            borderBottom: "1px solid var(--border-color)",
+                            background: "rgba(255, 255, 255, 0.02)",
+                          }}
+                        >
+                          <td
+                            style={{
+                              padding: "0.5rem 0.5rem",
+                              textAlign: "right",
+                              color: "var(--text-secondary)",
+                            }}
+                          >
+                            <svg
+                              width="12"
+                              height="12"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              style={{ transform: "rotate(90deg) scaleX(-1)" }}
+                            >
+                              <path d="M9 18l6-6-6-6"></path>
+                            </svg>
+                          </td>
+                          <td style={{ padding: "0.5rem 1rem 0.5rem 2rem" }}>
+                            <a
+                              href={blocker.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                color: "var(--accent-secondary)",
+                                textDecoration: "none",
+                                fontSize: "0.8rem",
+                                opacity: 0.8,
+                              }}
+                            >
+                              {blocker.key}
+                            </a>
+                          </td>
+                          <td
+                            style={{
+                              padding: "0.5rem 1rem",
+                              color: "var(--text-secondary)",
+                              fontSize: "0.8rem",
+                              fontStyle: "italic",
+                            }}
+                          >
+                            {blocker.summary}
+                          </td>
+                          <td style={{ padding: "0.5rem 1rem" }}>
+                            <span
+                              style={{
+                                background: "rgba(255, 255, 255, 0.1)",
+                                color: "var(--text-secondary)",
+                                padding: "0.05rem 0.4rem",
+                                borderRadius: "4px",
+                                fontSize: "0.7rem",
+                              }}
+                            >
+                              {blocker.status}
+                            </span>
+                          </td>
+                          <td colSpan={2}></td>
+                        </tr>
+                      ))}
+                  </React.Fragment>
                 ))}
             </tbody>
           </table>

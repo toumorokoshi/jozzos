@@ -30,6 +30,7 @@ describe("JiraClient", () => {
               status: { name: "In Progress" },
               assignee: { displayName: "John Doe" },
               reporter: { displayName: "Jane Doe" },
+              issuelinks: [],
             },
           },
         ],
@@ -41,7 +42,7 @@ describe("JiraClient", () => {
     const issues = await getIssuesByFilter(mockConfig, "10001");
 
     expect(fetch).toHaveBeenCalledWith(
-      "https://test-domain.atlassian.net/rest/api/3/search/jql?jql=filter%3D10001&fields=summary,status,assignee,reporter",
+      "https://test-domain.atlassian.net/rest/api/3/search/jql?jql=filter%3D10001&fields=summary,status,assignee,reporter,issuelinks",
       expect.objectContaining({
         method: "GET",
         headers: expect.objectContaining({
@@ -59,6 +60,64 @@ describe("JiraClient", () => {
       assignee: "John Doe",
       reporter: "Jane Doe",
       url: "https://test-domain.atlassian.net/browse/TEST-1",
+      blockingIssues: undefined,
+    });
+  });
+
+  it("should map blocking issues correctly", async () => {
+    const mockResponse = {
+      ok: true,
+      json: async () => ({
+        issues: [
+          {
+            id: "1001",
+            key: "TEST-1",
+            fields: {
+              summary: "Main Issue",
+              status: { name: "In Progress" },
+              issuelinks: [
+                {
+                  id: "link-1",
+                  type: { name: "Blocks" },
+                  inwardIssue: {
+                    id: "1002",
+                    key: "BLOCK-1",
+                    fields: {
+                      summary: "Blocking Issue",
+                      status: { name: "Open" },
+                    },
+                  },
+                },
+                {
+                  id: "link-2",
+                  type: { name: "Relates" },
+                  inwardIssue: {
+                    id: "1003",
+                    key: "REL-1",
+                    fields: {
+                      summary: "Related Issue",
+                      status: { name: "Open" },
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      }),
+    };
+
+    vi.mocked(fetch).mockResolvedValue(mockResponse as unknown as Response);
+
+    const issues = await getIssuesByFilter(mockConfig, "TEST-1");
+
+    expect(issues[0].blockingIssues).toHaveLength(1);
+    expect(issues[0].blockingIssues![0]).toEqual({
+      id: "1002",
+      key: "BLOCK-1",
+      summary: "Blocking Issue",
+      status: "Open",
+      url: "https://test-domain.atlassian.net/browse/BLOCK-1",
     });
   });
 
@@ -72,7 +131,7 @@ describe("JiraClient", () => {
     await getIssuesByFilter(mockConfig, "project = TEST");
 
     expect(fetch).toHaveBeenCalledWith(
-      "https://test-domain.atlassian.net/rest/api/3/search/jql?jql=project%20%3D%20TEST&fields=summary,status,assignee,reporter",
+      "https://test-domain.atlassian.net/rest/api/3/search/jql?jql=project%20%3D%20TEST&fields=summary,status,assignee,reporter,issuelinks",
       expect.any(Object),
     );
   });
