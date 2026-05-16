@@ -9,3 +9,10 @@ Although this will be built for Jira initially, I want to make it agnostic to th
 Instead of a UI built into the actual cloud service, I would like to be able to render and use the UI locally instead. This enables a significant amount of control in the front-end framework and experience.
 
 An API key can be fed into the application to authenticate, list issues, etc.
+
+### Navigation & Layout
+
+- **Hamburger Navigation**: A hamburger menu provides access to different pages within the app, keeping the main interface clean.
+- **Hidden Configuration**: API configuration and settings are placed on a separate dedicated page (e.g. `/settings`).
+- **Main View**: The primary view focuses entirely on the issue table and query inputs.
+- **Sparse Spreadsheet View**: Search results are rendered in a dense, spreadsheet-like view that minimizes vertical space and focuses on critical details (e.g., ID, Key, Summary, Status) to accommodate high-volume issue triage.
