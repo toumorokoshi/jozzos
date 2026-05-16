@@ -28,5 +28,6 @@ export default defineConfig(({ mode }) => {
       include: ["**/*_test.ts", "**/*_test.tsx"],
       environment: "jsdom",
     },
+    envPrefix: ["VITE_", "JIRA_"],
   };
 });

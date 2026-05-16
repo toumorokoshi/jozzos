@@ -3,8 +3,8 @@ import { getIssuesByFilter } from "./services/JiraClient";
 import type { Issue } from "./models/Issue";
 
 function App() {
-  const [apiKey, setApiKey] = useState("");
-  const [userEmail, setUserEmail] = useState("");
+  const [apiKey, setApiKey] = useState(import.meta.env.JIRA_API_KEY || "");
+  const [userEmail, setUserEmail] = useState(import.meta.env.JIRA_EMAIL || "");
   const [filterId, setFilterId] = useState("");
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(false);
@@ -13,6 +13,11 @@ function App() {
   const handleSearch = async () => {
     if (!filterId) {
       setError("Please enter a Filter ID or JQL");
+      return;
+    }
+    
+    if (apiKey && !userEmail) {
+      setError("Jira Cloud requires your Email address when using an API Key (Basic Auth). Please provide your Jira Email.");
       return;
     }
 
