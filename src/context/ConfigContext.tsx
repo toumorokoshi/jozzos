@@ -13,8 +13,22 @@ const ConfigContext = createContext<ConfigContextType | undefined>(undefined);
 export const ConfigProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
-  const [apiKey, setApiKey] = useState(import.meta.env.JIRA_API_KEY || "");
-  const [userEmail, setUserEmail] = useState(import.meta.env.JIRA_EMAIL || "");
+  const [apiKey, setApiKeyState] = useState(
+    localStorage.getItem("jira_api_key") || "",
+  );
+  const [userEmail, setUserEmailState] = useState(
+    localStorage.getItem("jira_email") || "",
+  );
+
+  const setApiKey = (key: string) => {
+    setApiKeyState(key);
+    localStorage.setItem("jira_api_key", key);
+  };
+
+  const setUserEmail = (email: string) => {
+    setUserEmailState(email);
+    localStorage.setItem("jira_email", email);
+  };
 
   return (
     <ConfigContext.Provider
