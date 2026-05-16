@@ -1,0 +1,16 @@
+evals:
+  - id: "1"
+    prompt: >
+      create a command-line tool that mimics "grep". It should have the following functionality:
+
+      1. search a directory for files which contain a string matching a specific pattern.
+      2. support full regex-based matching.
+      3. specify a subdirectory.
+      4. specify a glob match.
+
+      The tool should be written in rust.
+    expected_output: >
+      1. the repository contains a justfile, with the following commands: lint, fix, and format.
+      2. the repository does not print to stdout directly. Instead, it uses a logging library.
+    files: []
+  # TODO: add one for a UI.
