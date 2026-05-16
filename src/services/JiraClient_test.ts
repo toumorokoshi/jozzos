@@ -65,6 +65,8 @@ describe("JiraClient", () => {
       reporter: "Jane Doe",
       url: "https://test-domain.atlassian.net/browse/TEST-1",
       blockingIssues: undefined,
+      blockedBy: undefined,
+      blocks: undefined,
       description: { type: "doc", content: [] },
       priority: "High",
       created: "2026-05-16T12:00:00.000Z",
@@ -108,6 +110,18 @@ describe("JiraClient", () => {
                     },
                   },
                 },
+                {
+                  id: "link-3",
+                  type: { name: "Blocks" },
+                  outwardIssue: {
+                    id: "1004",
+                    key: "BLOCKED-1",
+                    fields: {
+                      summary: "Blocked Issue",
+                      status: { name: "Open" },
+                    },
+                  },
+                },
               ],
             },
           },
@@ -120,12 +134,21 @@ describe("JiraClient", () => {
     const issues = await getIssuesByFilter(mockConfig, "TEST-1");
 
     expect(issues[0].blockingIssues).toHaveLength(1);
-    expect(issues[0].blockingIssues![0]).toEqual({
+    expect(issues[0].blockedBy).toHaveLength(1);
+    expect(issues[0].blocks).toHaveLength(1);
+    expect(issues[0].blockedBy![0]).toEqual({
       id: "1002",
       key: "BLOCK-1",
       summary: "Blocking Issue",
       status: "Open",
       url: "https://test-domain.atlassian.net/browse/BLOCK-1",
+    });
+    expect(issues[0].blocks![0]).toEqual({
+      id: "1004",
+      key: "BLOCKED-1",
+      summary: "Blocked Issue",
+      status: "Open",
+      url: "https://test-domain.atlassian.net/browse/BLOCKED-1",
     });
   });
 

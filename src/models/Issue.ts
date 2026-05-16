@@ -7,6 +7,8 @@ export interface Issue {
   reporter?: string;
   url: string;
   blockingIssues?: Issue[];
+  blockedBy?: Issue[];
+  blocks?: Issue[];
   description?: unknown;
   priority?: string;
   created?: string;

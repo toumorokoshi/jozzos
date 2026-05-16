@@ -668,8 +668,8 @@ export const IssuesPage: React.FC = () => {
               borderRadius: "16px",
               boxShadow:
                 "0 20px 50px rgba(0, 0, 0, 0.6), inset 0 0 1px 1px rgba(255, 255, 255, 0.1)",
-              width: "100%",
-              maxWidth: "900px",
+              width: "95vw",
+              maxWidth: "1350px",
               maxHeight: "90vh",
               display: "flex",
               flexDirection: "column",
@@ -864,105 +864,319 @@ export const IssuesPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Blocking Issues / Dependencies */}
-                {selectedIssue.blockingIssues &&
-                  selectedIssue.blockingIssues.length > 0 && (
-                    <div>
-                      <h3
-                        style={{
-                          fontSize: "0.85rem",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.05em",
-                          color: "var(--text-secondary)",
-                          marginBottom: "0.75rem",
-                          borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
-                          paddingBottom: "0.25rem",
-                        }}
-                      >
-                        Blocking Issues ({selectedIssue.blockingIssues.length})
-                      </h3>
-                      <div
-                        style={{
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: "0.5rem",
-                        }}
-                      >
-                        {selectedIssue.blockingIssues.map((blocker) => (
+                {/* Dependencies Section */}
+                {((selectedIssue.blockedBy &&
+                  selectedIssue.blockedBy.length > 0) ||
+                  (selectedIssue.blocks &&
+                    selectedIssue.blocks.length > 0)) && (
+                  <div
+                    style={{
+                      marginTop: "1rem",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "1.5rem",
+                    }}
+                  >
+                    <h3
+                      style={{
+                        fontSize: "0.85rem",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                        color: "var(--text-secondary)",
+                        marginBottom: "0.5rem",
+                        borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
+                        paddingBottom: "0.25rem",
+                      }}
+                    >
+                      Issue Dependencies
+                    </h3>
+
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns:
+                          "repeat(auto-fit, minmax(320px, 1fr))",
+                        gap: "1.5rem",
+                      }}
+                    >
+                      {/* Blocked By Column */}
+                      <div>
+                        <h4
+                          style={{
+                            fontSize: "0.8rem",
+                            fontWeight: "600",
+                            color: "#ff6b6b",
+                            marginBottom: "0.75rem",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px",
+                          }}
+                        >
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <rect
+                              x="3"
+                              y="11"
+                              width="18"
+                              height="11"
+                              rx="2"
+                              ry="2"
+                            ></rect>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                          </svg>
+                          Blocked By ({selectedIssue.blockedBy?.length || 0})
+                        </h4>
+
+                        {selectedIssue.blockedBy &&
+                        selectedIssue.blockedBy.length > 0 ? (
                           <div
-                            key={blocker.id}
                             style={{
-                              background: "rgba(255, 255, 255, 0.02)",
-                              border: "1px solid var(--border-color)",
-                              borderRadius: "6px",
-                              padding: "0.75rem",
                               display: "flex",
-                              justifyContent: "space-between",
-                              alignItems: "center",
-                              gap: "1rem",
-                              transition: "background 0.2s",
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.background =
-                                "rgba(255, 255, 255, 0.05)";
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.background =
-                                "rgba(255, 255, 255, 0.02)";
+                              flexDirection: "column",
+                              gap: "0.5rem",
                             }}
                           >
-                            <div
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "0.75rem",
-                                flex: 1,
-                                minWidth: 0,
-                              }}
-                            >
-                              <a
-                                href={blocker.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
+                            {selectedIssue.blockedBy.map((dep) => (
+                              <div
+                                key={dep.id}
                                 style={{
-                                  color: "var(--accent-secondary)",
-                                  textDecoration: "none",
-                                  fontSize: "0.85rem",
-                                  fontWeight: "500",
-                                  whiteSpace: "nowrap",
+                                  background: "rgba(255, 107, 107, 0.03)",
+                                  border: "1px solid rgba(255, 107, 107, 0.15)",
+                                  borderRadius: "8px",
+                                  padding: "0.75rem",
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "center",
+                                  gap: "1rem",
+                                  transition:
+                                    "background 0.2s, border-color 0.2s",
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.background =
+                                    "rgba(255, 107, 107, 0.08)";
+                                  e.currentTarget.style.borderColor =
+                                    "rgba(255, 107, 107, 0.3)";
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.background =
+                                    "rgba(255, 107, 107, 0.03)";
+                                  e.currentTarget.style.borderColor =
+                                    "rgba(255, 107, 107, 0.15)";
                                 }}
                               >
-                                {blocker.key}
-                              </a>
-                              <span
-                                style={{
-                                  color: "var(--text-primary)",
-                                  fontSize: "0.85rem",
-                                  whiteSpace: "nowrap",
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                }}
-                              >
-                                {blocker.summary}
-                              </span>
-                            </div>
-                            <span
-                              style={{
-                                background: "rgba(255, 255, 255, 0.1)",
-                                color: "var(--text-secondary)",
-                                padding: "0.1rem 0.4rem",
-                                borderRadius: "4px",
-                                fontSize: "0.75rem",
-                                fontWeight: "600",
-                              }}
-                            >
-                              {blocker.status}
-                            </span>
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "0.75rem",
+                                    flex: 1,
+                                    minWidth: 0,
+                                  }}
+                                >
+                                  <a
+                                    href={dep.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{
+                                      color: "#ff6b6b",
+                                      textDecoration: "none",
+                                      fontSize: "0.85rem",
+                                      fontWeight: "600",
+                                      whiteSpace: "nowrap",
+                                    }}
+                                  >
+                                    {dep.key}
+                                  </a>
+                                  <span
+                                    style={{
+                                      color: "var(--text-primary)",
+                                      fontSize: "0.85rem",
+                                      overflow: "hidden",
+                                      textOverflow: "ellipsis",
+                                      whiteSpace: "nowrap",
+                                    }}
+                                  >
+                                    {dep.summary}
+                                  </span>
+                                </div>
+                                <span
+                                  style={{
+                                    background: "rgba(255, 107, 107, 0.15)",
+                                    color: "#ff8787",
+                                    padding: "0.15rem 0.45rem",
+                                    borderRadius: "4px",
+                                    fontSize: "0.7rem",
+                                    fontWeight: "700",
+                                    whiteSpace: "nowrap",
+                                  }}
+                                >
+                                  {dep.status}
+                                </span>
+                              </div>
+                            ))}
                           </div>
-                        ))}
+                        ) : (
+                          <div
+                            style={{
+                              color: "var(--text-secondary)",
+                              fontStyle: "italic",
+                              fontSize: "0.85rem",
+                              padding: "0.5rem 0",
+                            }}
+                          >
+                            No blockers.
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Blocks Column */}
+                      <div>
+                        <h4
+                          style={{
+                            fontSize: "0.8rem",
+                            fontWeight: "600",
+                            color: "#4dabf7",
+                            marginBottom: "0.75rem",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px",
+                          }}
+                        >
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <rect
+                              x="3"
+                              y="11"
+                              width="18"
+                              height="11"
+                              rx="2"
+                              ry="2"
+                            ></rect>
+                            <path d="M7 11V7a5 5 0 0 1 9.9-1"></path>
+                          </svg>
+                          Blocks ({selectedIssue.blocks?.length || 0})
+                        </h4>
+
+                        {selectedIssue.blocks &&
+                        selectedIssue.blocks.length > 0 ? (
+                          <div
+                            style={{
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: "0.5rem",
+                            }}
+                          >
+                            {selectedIssue.blocks.map((dep) => (
+                              <div
+                                key={dep.id}
+                                style={{
+                                  background: "rgba(77, 171, 247, 0.03)",
+                                  border: "1px solid rgba(77, 171, 247, 0.15)",
+                                  borderRadius: "8px",
+                                  padding: "0.75rem",
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "center",
+                                  gap: "1rem",
+                                  transition:
+                                    "background 0.2s, border-color 0.2s",
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.background =
+                                    "rgba(77, 171, 247, 0.08)";
+                                  e.currentTarget.style.borderColor =
+                                    "rgba(77, 171, 247, 0.3)";
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.background =
+                                    "rgba(77, 171, 247, 0.03)";
+                                  e.currentTarget.style.borderColor =
+                                    "rgba(77, 171, 247, 0.15)";
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "0.75rem",
+                                    flex: 1,
+                                    minWidth: 0,
+                                  }}
+                                >
+                                  <a
+                                    href={dep.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{
+                                      color: "#4dabf7",
+                                      textDecoration: "none",
+                                      fontSize: "0.85rem",
+                                      fontWeight: "600",
+                                      whiteSpace: "nowrap",
+                                    }}
+                                  >
+                                    {dep.key}
+                                  </a>
+                                  <span
+                                    style={{
+                                      color: "var(--text-primary)",
+                                      fontSize: "0.85rem",
+                                      overflow: "hidden",
+                                      textOverflow: "ellipsis",
+                                      whiteSpace: "nowrap",
+                                    }}
+                                  >
+                                    {dep.summary}
+                                  </span>
+                                </div>
+                                <span
+                                  style={{
+                                    background: "rgba(77, 171, 247, 0.15)",
+                                    color: "#a5d8ff",
+                                    padding: "0.15rem 0.45rem",
+                                    borderRadius: "4px",
+                                    fontSize: "0.7rem",
+                                    fontWeight: "700",
+                                    whiteSpace: "nowrap",
+                                  }}
+                                >
+                                  {dep.status}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div
+                            style={{
+                              color: "var(--text-secondary)",
+                              fontStyle: "italic",
+                              fontSize: "0.85rem",
+                              padding: "0.5rem 0",
+                            }}
+                          >
+                            Doesn\'t block other issues.
+                          </div>
+                        )}
                       </div>
                     </div>
-                  )}
+                  </div>
+                )}
               </div>
 
               {/* Sidebar Info (Right Side) */}

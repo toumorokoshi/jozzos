@@ -99,23 +99,50 @@ export const getIssuesByFilter = async (
   const data = await response.json();
 
   return data.issues.map((issue: JiraIssueResponse) => {
-    const blockingIssues: Issue[] = (issue.fields?.issuelinks || [])
-      .filter((link: JiraIssueLink) => {
-        if (!link.inwardIssue) return false;
-        const typeName = (link.type?.name || "").toLowerCase();
-        const inwardDesc = (link.type?.inward || "").toLowerCase();
-        return typeName === "blocks" || inwardDesc.includes("blocked by");
-      })
-      .map((link: JiraIssueLink) => {
-        const inward = link.inwardIssue!;
-        return {
-          id: inward.id,
-          key: inward.key,
-          summary: inward.fields?.summary || "No Summary",
-          status: inward.fields?.status?.name || "Unknown",
-          url: `https://${config.jiraDomain}/browse/${inward.key}`,
-        };
-      });
+    const blockedBy: Issue[] = [];
+    const blocks: Issue[] = [];
+
+    (issue.fields?.issuelinks || []).forEach((link: JiraIssueLink) => {
+      const typeName = (link.type?.name || "").toLowerCase();
+      const inwardDesc = (link.type?.inward || "").toLowerCase();
+      const outwardDesc = (link.type?.outward || "").toLowerCase();
+
+      // Check for blockedBy (current issue is blocked by inwardIssue)
+      if (link.inwardIssue) {
+        if (
+          typeName === "blocks" ||
+          inwardDesc.includes("blocked by") ||
+          inwardDesc.includes("is blocked by")
+        ) {
+          const inward = link.inwardIssue;
+          blockedBy.push({
+            id: inward.id,
+            key: inward.key,
+            summary: inward.fields?.summary || "No Summary",
+            status: inward.fields?.status?.name || "Unknown",
+            url: `https://${config.jiraDomain}/browse/${inward.key}`,
+          });
+        }
+      }
+
+      // Check for blocks (current issue blocks outwardIssue)
+      if (link.outwardIssue) {
+        if (
+          typeName === "blocks" ||
+          outwardDesc.includes("blocks") ||
+          outwardDesc.includes("block")
+        ) {
+          const outward = link.outwardIssue;
+          blocks.push({
+            id: outward.id,
+            key: outward.key,
+            summary: outward.fields?.summary || "No Summary",
+            status: outward.fields?.status?.name || "Unknown",
+            url: `https://${config.jiraDomain}/browse/${outward.key}`,
+          });
+        }
+      }
+    });
 
     return {
       id: issue.id,
@@ -125,7 +152,9 @@ export const getIssuesByFilter = async (
       assignee: issue.fields?.assignee?.displayName,
       reporter: issue.fields?.reporter?.displayName,
       url: `https://${config.jiraDomain}/browse/${issue.key}`,
-      blockingIssues: blockingIssues.length > 0 ? blockingIssues : undefined,
+      blockingIssues: blockedBy.length > 0 ? blockedBy : undefined,
+      blockedBy: blockedBy.length > 0 ? blockedBy : undefined,
+      blocks: blocks.length > 0 ? blocks : undefined,
       description: issue.fields?.description,
       priority: issue.fields?.priority?.name,
       created: issue.fields?.created,
