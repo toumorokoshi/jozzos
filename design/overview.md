@@ -14,5 +14,5 @@ An API key can be fed into the application to authenticate, list issues, etc.
 
 - **Hamburger Navigation**: A hamburger menu provides access to different pages within the app, keeping the main interface clean.
 - **Hidden Configuration**: API configuration and settings are placed on a separate dedicated page (e.g. `/settings`).
-- **Main View**: The primary view focuses entirely on the issue table and query inputs.
+- **Main View**: The primary view focuses entirely on the issue table and query inputs. A history of previous queries is maintained (up to 1000 items) to allow quick access to frequent searches.
 - **Sparse Spreadsheet View**: Search results are rendered in a dense, spreadsheet-like view that minimizes vertical space and focuses on critical details (e.g., ID, Key, Summary, Status) to accommodate high-volume issue triage.

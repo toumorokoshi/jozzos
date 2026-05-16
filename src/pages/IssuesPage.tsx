@@ -3,12 +3,34 @@ import { getIssuesByFilter } from "../services/JiraClient";
 import type { Issue } from "../models/Issue";
 import { useConfig } from "../context/ConfigContext";
 
+const MAX_HISTORY_LENGTH = 1000;
+
 export const IssuesPage: React.FC = () => {
   const { apiKey, userEmail } = useConfig();
   const [filterId, setFilterId] = useState("");
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [queryHistory, setQueryHistory] = useState<string[]>(() => {
+    const saved = localStorage.getItem("jozzos_query_history");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Failed to parse query history", e);
+      }
+    }
+    return [];
+  });
+
+  const addToHistory = (query: string) => {
+    setQueryHistory((prev) => {
+      const filtered = prev.filter((q) => q !== query);
+      const next = [query, ...filtered].slice(0, MAX_HISTORY_LENGTH);
+      localStorage.setItem("jozzos_query_history", JSON.stringify(next));
+      return next;
+    });
+  };
 
   const handleSearch = async () => {
     if (!filterId) {
@@ -38,6 +60,7 @@ export const IssuesPage: React.FC = () => {
       );
 
       setIssues(results);
+      addToHistory(filterId);
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -87,6 +110,65 @@ export const IssuesPage: React.FC = () => {
           {loading ? "Searching..." : "Search"}
         </button>
       </div>
+
+      {/* Query History */}
+      {queryHistory.length > 0 && (
+        <div
+          style={{
+            display: "flex",
+            gap: "0.5rem",
+            flexWrap: "wrap",
+            alignItems: "center",
+            marginTop: "-0.5rem",
+          }}
+        >
+          <span
+            style={{
+              fontSize: "0.75rem",
+              color: "var(--text-secondary)",
+              textTransform: "uppercase",
+              letterSpacing: "0.05em",
+            }}
+          >
+            Recent:
+          </span>
+          {queryHistory.slice(0, 10).map((query, index) => (
+            <button
+              key={index}
+              onClick={() => {
+                setFilterId(query);
+                // Trigger search immediately if desired
+                // setTimeout(() => handleSearch(), 0);
+              }}
+              className="glass-panel"
+              style={{
+                padding: "0.25rem 0.75rem",
+                fontSize: "0.75rem",
+                cursor: "pointer",
+                background: "rgba(255, 255, 255, 0.05)",
+                border: "1px solid rgba(255, 255, 255, 0.1)",
+                borderRadius: "100px",
+                color: "var(--text-secondary)",
+                transition: "all var(--transition-fast)",
+                whiteSpace: "nowrap",
+                maxWidth: "200px",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "rgba(255, 255, 255, 0.1)";
+                e.currentTarget.style.color = "var(--text-primary)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
+                e.currentTarget.style.color = "var(--text-secondary)";
+              }}
+            >
+              {query}
+            </button>
+          ))}
+        </div>
+      )}
 
       {error && (
         <div
