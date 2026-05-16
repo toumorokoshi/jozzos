@@ -55,6 +55,10 @@ interface JiraIssueResponse {
     assignee?: { displayName?: string };
     reporter?: { displayName?: string };
     issuelinks?: JiraIssueLink[];
+    description?: unknown;
+    priority?: { name?: string };
+    created?: string;
+    updated?: string;
   };
 }
 
@@ -73,7 +77,7 @@ export const getIssuesByFilter = async (
 
   const url = `${baseUri}/rest/api/3/search/jql?jql=${encodeURIComponent(
     jql,
-  )}&fields=summary,status,assignee,reporter,issuelinks`;
+  )}&fields=summary,status,assignee,reporter,issuelinks,description,priority,created,updated`;
 
   const headers = getAuthHeaders(config) as Record<string, string>;
   if (useProxy && config.jiraDomain) {
@@ -98,8 +102,8 @@ export const getIssuesByFilter = async (
     const blockingIssues: Issue[] = (issue.fields?.issuelinks || [])
       .filter((link: JiraIssueLink) => {
         if (!link.inwardIssue) return false;
-        const typeName = link.type.name.toLowerCase();
-        const inwardDesc = link.type.inward.toLowerCase();
+        const typeName = (link.type?.name || "").toLowerCase();
+        const inwardDesc = (link.type?.inward || "").toLowerCase();
         return typeName === "blocks" || inwardDesc.includes("blocked by");
       })
       .map((link: JiraIssueLink) => {
@@ -122,6 +126,10 @@ export const getIssuesByFilter = async (
       reporter: issue.fields?.reporter?.displayName,
       url: `https://${config.jiraDomain}/browse/${issue.key}`,
       blockingIssues: blockingIssues.length > 0 ? blockingIssues : undefined,
+      description: issue.fields?.description,
+      priority: issue.fields?.priority?.name,
+      created: issue.fields?.created,
+      updated: issue.fields?.updated,
     };
   });
 };

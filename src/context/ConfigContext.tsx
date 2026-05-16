@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import React, { createContext, useContext, useState, ReactNode } from "react";
+import React, { createContext, useContext, useState } from "react";
 
 interface ConfigContextType {
   apiKey: string;
@@ -12,7 +12,7 @@ interface ConfigContextType {
 
 const ConfigContext = createContext<ConfigContextType | undefined>(undefined);
 
-export const ConfigProvider: React.FC<{ children: ReactNode }> = ({
+export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [apiKey, setApiKeyState] = useState(

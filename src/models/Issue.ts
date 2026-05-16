@@ -7,6 +7,10 @@ export interface Issue {
   reporter?: string;
   url: string;
   blockingIssues?: Issue[];
+  description?: unknown;
+  priority?: string;
+  created?: string;
+  updated?: string;
 }
 
 export interface IssueTrackerConfig {

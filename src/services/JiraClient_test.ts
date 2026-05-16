@@ -31,6 +31,10 @@ describe("JiraClient", () => {
               assignee: { displayName: "John Doe" },
               reporter: { displayName: "Jane Doe" },
               issuelinks: [],
+              description: { type: "doc", content: [] },
+              priority: { name: "High" },
+              created: "2026-05-16T12:00:00.000Z",
+              updated: "2026-05-16T13:00:00.000Z",
             },
           },
         ],
@@ -42,7 +46,7 @@ describe("JiraClient", () => {
     const issues = await getIssuesByFilter(mockConfig, "10001");
 
     expect(fetch).toHaveBeenCalledWith(
-      "https://test-domain.atlassian.net/rest/api/3/search/jql?jql=filter%3D10001&fields=summary,status,assignee,reporter,issuelinks",
+      "https://test-domain.atlassian.net/rest/api/3/search/jql?jql=filter%3D10001&fields=summary,status,assignee,reporter,issuelinks,description,priority,created,updated",
       expect.objectContaining({
         method: "GET",
         headers: expect.objectContaining({
@@ -61,6 +65,10 @@ describe("JiraClient", () => {
       reporter: "Jane Doe",
       url: "https://test-domain.atlassian.net/browse/TEST-1",
       blockingIssues: undefined,
+      description: { type: "doc", content: [] },
+      priority: "High",
+      created: "2026-05-16T12:00:00.000Z",
+      updated: "2026-05-16T13:00:00.000Z",
     });
   });
 
@@ -131,7 +139,7 @@ describe("JiraClient", () => {
     await getIssuesByFilter(mockConfig, "project = TEST");
 
     expect(fetch).toHaveBeenCalledWith(
-      "https://test-domain.atlassian.net/rest/api/3/search/jql?jql=project%20%3D%20TEST&fields=summary,status,assignee,reporter,issuelinks",
+      "https://test-domain.atlassian.net/rest/api/3/search/jql?jql=project%20%3D%20TEST&fields=summary,status,assignee,reporter,issuelinks,description,priority,created,updated",
       expect.any(Object),
     );
   });
