@@ -24,5 +24,9 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
+    test: {
+      include: ["**/*_test.ts", "**/*_test.tsx"],
+      environment: "jsdom",
+    },
   };
 });
