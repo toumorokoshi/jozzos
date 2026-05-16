@@ -11,5 +11,6 @@ export interface Issue {
 export interface IssueTrackerConfig {
   apiToken: string;
   userEmail?: string;
+  jiraDomain: string;
   useProxy?: boolean;
 }

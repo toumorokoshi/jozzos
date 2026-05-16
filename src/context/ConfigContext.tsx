@@ -6,6 +6,8 @@ interface ConfigContextType {
   setApiKey: (key: string) => void;
   userEmail: string;
   setUserEmail: (email: string) => void;
+  jiraDomain: string;
+  setJiraDomain: (domain: string) => void;
 }
 
 const ConfigContext = createContext<ConfigContextType | undefined>(undefined);
@@ -19,6 +21,9 @@ export const ConfigProvider: React.FC<{ children: ReactNode }> = ({
   const [userEmail, setUserEmailState] = useState(
     localStorage.getItem("jira_email") || "",
   );
+  const [jiraDomain, setJiraDomainState] = useState(
+    localStorage.getItem("jira_domain") || "",
+  );
 
   const setApiKey = (key: string) => {
     setApiKeyState(key);
@@ -30,9 +35,21 @@ export const ConfigProvider: React.FC<{ children: ReactNode }> = ({
     localStorage.setItem("jira_email", email);
   };
 
+  const setJiraDomain = (domain: string) => {
+    setJiraDomainState(domain);
+    localStorage.setItem("jira_domain", domain);
+  };
+
   return (
     <ConfigContext.Provider
-      value={{ apiKey, setApiKey, userEmail, setUserEmail }}
+      value={{
+        apiKey,
+        setApiKey,
+        userEmail,
+        setUserEmail,
+        jiraDomain,
+        setJiraDomain,
+      }}
     >
       {children}
     </ConfigContext.Provider>

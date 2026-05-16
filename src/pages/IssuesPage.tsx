@@ -6,7 +6,7 @@ import { useConfig } from "../context/ConfigContext";
 const MAX_HISTORY_LENGTH = 1000;
 
 export const IssuesPage: React.FC = () => {
-  const { apiKey, userEmail } = useConfig();
+  const { apiKey, userEmail, jiraDomain } = useConfig();
   const [filterId, setFilterId] = useState("");
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(false);
@@ -38,6 +38,13 @@ export const IssuesPage: React.FC = () => {
       return;
     }
 
+    if (!jiraDomain) {
+      setError(
+        "Jira Domain is required. Please set it in the Settings page (e.g. your-domain.atlassian.net).",
+      );
+      return;
+    }
+
     if (apiKey && !userEmail) {
       setError(
         "Jira Cloud requires your Email address when using an API Key (Basic Auth). Please provide your Jira Email in the Settings page.",
@@ -54,6 +61,7 @@ export const IssuesPage: React.FC = () => {
         {
           apiToken: apiKey,
           userEmail: userEmail,
+          jiraDomain: jiraDomain,
           useProxy: true,
         },
         filterId,

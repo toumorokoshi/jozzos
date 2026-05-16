@@ -5,6 +5,7 @@ describe("JiraClient", () => {
   const mockConfig = {
     apiToken: "test-token",
     userEmail: "test@example.com",
+    jiraDomain: "test-domain.atlassian.net",
     useProxy: false,
   };
 
@@ -40,7 +41,7 @@ describe("JiraClient", () => {
     const issues = await getIssuesByFilter(mockConfig, "10001");
 
     expect(fetch).toHaveBeenCalledWith(
-      "/rest/api/3/search/jql?jql=filter%3D10001&fields=summary,status,assignee,reporter",
+      "https://test-domain.atlassian.net/rest/api/3/search/jql?jql=filter%3D10001&fields=summary,status,assignee,reporter",
       expect.objectContaining({
         method: "GET",
         headers: expect.objectContaining({
@@ -71,7 +72,7 @@ describe("JiraClient", () => {
     await getIssuesByFilter(mockConfig, "project = TEST");
 
     expect(fetch).toHaveBeenCalledWith(
-      "/rest/api/3/search/jql?jql=project%20%3D%20TEST&fields=summary,status,assignee,reporter",
+      "https://test-domain.atlassian.net/rest/api/3/search/jql?jql=project%20%3D%20TEST&fields=summary,status,assignee,reporter",
       expect.any(Object),
     );
   });

@@ -18,7 +18,7 @@ Jozzos is a premium UI for issue management systems, designed for superusers who
 
 ### Environment Setup
 
-Create a `.env` file in the root of the directory to configure the local Vite proxy. The proxy avoids CORS issues with the Jira REST API.
+Create a `.env` file in the root of the directory to configure the default local Vite proxy. The proxy avoids CORS issues with the Jira REST API. You can also configure the Jira Domain directly in the application's Settings page.
 
 ```env
 JIRA_HOSTNAME="your-domain.atlassian.net"

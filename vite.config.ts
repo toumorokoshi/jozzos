@@ -15,14 +15,24 @@ export default defineConfig(({ mode }) => {
           target: targetUrl,
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api\/jira/, ""),
+          // Allow dynamic target based on header
+          router: (req) => {
+            const domain = req.headers["x-jira-domain"];
+            if (domain) {
+              return `https://${domain}`;
+            }
+            return targetUrl;
+          },
           // Need to ensure the Origin header matches the target for Jira
           configure: (proxy) => {
             proxy.on("proxyReq", (proxyReq, req) => {
+              const domain = req.headers["x-jira-domain"] || jiraHostname;
+              const currentTarget = `https://${domain}`;
               console.log(`[Proxy] Incoming request: ${req.method} ${req.url}`);
               console.log(
-                `[Proxy] Forwarding to: ${proxyReq.method} ${targetUrl}${proxyReq.path}`,
+                `[Proxy] Forwarding to: ${proxyReq.method} ${currentTarget}${proxyReq.path}`,
               );
-              proxyReq.setHeader("Origin", targetUrl);
+              proxyReq.setHeader("Origin", currentTarget);
             });
             proxy.on("proxyRes", (proxyRes, req) => {
               console.log(

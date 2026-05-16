@@ -24,7 +24,8 @@ export const getIssuesByFilter = async (
   config: IssueTrackerConfig,
   filterIdOrJql: string,
 ): Promise<Issue[]> => {
-  const baseUri = config.useProxy !== false ? "/api/jira" : "";
+  const useProxy = config.useProxy !== false;
+  const baseUri = useProxy ? "/api/jira" : `https://${config.jiraDomain}`;
 
   let jql = filterIdOrJql;
   // If input is purely digits, treat it as a filter ID
@@ -34,9 +35,14 @@ export const getIssuesByFilter = async (
 
   const url = `${baseUri}/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&fields=summary,status,assignee,reporter`;
 
+  const headers = getAuthHeaders(config) as Record<string, string>;
+  if (useProxy && config.jiraDomain) {
+    headers["x-jira-domain"] = config.jiraDomain;
+  }
+
   const response = await fetch(url, {
     method: "GET",
-    headers: getAuthHeaders(config),
+    headers,
   });
 
   if (!response.ok) {

@@ -2,7 +2,14 @@ import React from "react";
 import { useConfig } from "../context/ConfigContext";
 
 export const SettingsPage: React.FC = () => {
-  const { apiKey, setApiKey, userEmail, setUserEmail } = useConfig();
+  const {
+    apiKey,
+    setApiKey,
+    userEmail,
+    setUserEmail,
+    jiraDomain,
+    setJiraDomain,
+  } = useConfig();
 
   return (
     <div
@@ -16,6 +23,25 @@ export const SettingsPage: React.FC = () => {
           credentials are saved locally in your browser.
         </p>
         <div style={{ display: "flex", gap: "1rem", flexDirection: "column" }}>
+          <div>
+            <label
+              style={{
+                display: "block",
+                marginBottom: "0.5rem",
+                fontSize: "0.9rem",
+                color: "var(--text-secondary)",
+              }}
+            >
+              Jira Domain
+            </label>
+            <input
+              type="text"
+              className="input-field"
+              placeholder="e.g. your-domain.atlassian.net"
+              value={jiraDomain}
+              onChange={(e) => setJiraDomain(e.target.value)}
+            />
+          </div>
           <div>
             <label
               style={{
