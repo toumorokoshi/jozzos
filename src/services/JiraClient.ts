@@ -1,4 +1,4 @@
-import { Issue, IssueTrackerConfig } from "../models/Issue";
+import type { Issue, IssueTrackerConfig } from "../models/Issue";
 
 const getAuthHeaders = (config: IssueTrackerConfig): HeadersInit => {
   const headers: HeadersInit = {

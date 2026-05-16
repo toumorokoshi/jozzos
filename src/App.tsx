@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { getIssuesByFilter } from "./services/JiraClient";
-import { Issue } from "./models/Issue";
+import type { Issue } from "./models/Issue";
 
 function App() {
   const [apiKey, setApiKey] = useState("");
