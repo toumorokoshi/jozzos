@@ -26,12 +26,15 @@ export default defineConfig(({ mode }) => {
           // Need to ensure the Origin header matches the target for Jira
           configure: (proxy) => {
             proxy.on("proxyReq", (proxyReq, req) => {
-              const domain = req.headers["x-jira-domain"] || jiraHostname;
+              const domain =
+                (req.headers["x-jira-domain"] as string) || jiraHostname;
               const currentTarget = `https://${domain}`;
               console.log(`[Proxy] Incoming request: ${req.method} ${req.url}`);
+              console.log("[Proxy] Incoming headers:", req.headers);
               console.log(
                 `[Proxy] Forwarding to: ${proxyReq.method} ${currentTarget}${proxyReq.path}`,
               );
+              console.log("[Proxy] Forwarded headers:", proxyReq.getHeaders());
               proxyReq.setHeader("Origin", currentTarget);
             });
             proxy.on("proxyRes", (proxyRes, req) => {
