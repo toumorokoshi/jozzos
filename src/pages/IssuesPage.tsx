@@ -133,7 +133,10 @@ export const IssuesPage: React.FC = () => {
               "updated",
             ].includes(f.id),
         );
-        setAvailableCustomFields(customOrNav);
+        const sortedFields = [...customOrNav].sort((a, b) =>
+          a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
+        );
+        setAvailableCustomFields(sortedFields);
       } catch (e) {
         console.error("Failed to fetch Jira fields", e);
       }
