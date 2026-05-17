@@ -1,5 +1,12 @@
 import React, { useState } from "react";
-import { getIssuesByFilter } from "../services/JiraClient";
+import {
+  getIssuesByFilter,
+  updateIssueFields,
+  getAvailableTransitions,
+  transitionIssue,
+  assignIssue,
+  searchJiraUsers,
+} from "../services/JiraClient";
 import type { Issue } from "../models/Issue";
 import { useConfig } from "../context/ConfigContext";
 
@@ -13,6 +20,179 @@ export const IssuesPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [expandedIssues, setExpandedIssues] = useState<Set<string>>(new Set());
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
+
+  // States for inline double-click editing
+  const [editingCell, setEditingCell] = useState<{
+    issueId: string;
+    field: "summary" | "status" | "assignee" | "reporter";
+  } | null>(null);
+  const [editValue, setEditValue] = useState("");
+  const [savingCell, setSavingCell] = useState(false);
+  const [transitionsMap, setTransitionsMap] = useState<
+    Record<string, { id: string; name: string }[]>
+  >({});
+  const [loadingTransitionsIssueId, setLoadingTransitionsIssueId] = useState<
+    string | null
+  >(null);
+
+  const startEditingStatus = async (issue: Issue) => {
+    setEditingCell({ issueId: issue.id, field: "status" });
+    setEditValue(issue.status);
+
+    if (transitionsMap[issue.id]) {
+      return;
+    }
+
+    setLoadingTransitionsIssueId(issue.id);
+    try {
+      const clientConfig = {
+        apiToken: apiKey,
+        userEmail: userEmail,
+        jiraDomain: jiraDomain,
+        useProxy: true,
+      };
+      const transitions = await getAvailableTransitions(
+        clientConfig,
+        issue.key,
+      );
+      setTransitionsMap((prev) => ({ ...prev, [issue.id]: transitions }));
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Failed to fetch status transitions");
+      }
+      setEditingCell(null);
+    } finally {
+      setLoadingTransitionsIssueId(null);
+    }
+  };
+
+  const handleTransitionSave = async (
+    issueId: string,
+    transitionId: string,
+    transitionName: string,
+  ) => {
+    setSavingCell(true);
+    setError(null);
+    try {
+      const issue = issues.find((i) => i.id === issueId);
+      if (!issue) return;
+
+      const clientConfig = {
+        apiToken: apiKey,
+        userEmail: userEmail,
+        jiraDomain: jiraDomain,
+        useProxy: true,
+      };
+
+      await transitionIssue(clientConfig, issue.key, transitionId);
+      setIssues((prev) =>
+        prev.map((i) =>
+          i.id === issueId ? { ...i, status: transitionName } : i,
+        ),
+      );
+      setEditingCell(null);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Failed to transition status");
+      }
+    } finally {
+      setSavingCell(false);
+    }
+  };
+
+  const handleInlineSave = async (
+    issueId: string,
+    field: "summary" | "status" | "assignee" | "reporter",
+    value: string,
+  ) => {
+    setSavingCell(true);
+    setError(null);
+    try {
+      const issue = issues.find((i) => i.id === issueId);
+      if (!issue) return;
+
+      const clientConfig = {
+        apiToken: apiKey,
+        userEmail: userEmail,
+        jiraDomain: jiraDomain,
+        useProxy: true,
+      };
+
+      if (field === "summary") {
+        await updateIssueFields(clientConfig, issue.key, { summary: value });
+        setIssues((prev) =>
+          prev.map((i) => (i.id === issueId ? { ...i, summary: value } : i)),
+        );
+      } else if (field === "assignee") {
+        const trimmed = value.trim();
+        if (
+          !trimmed ||
+          trimmed === "-" ||
+          trimmed.toLowerCase() === "unassigned"
+        ) {
+          await assignIssue(clientConfig, issue.key, null);
+          setIssues((prev) =>
+            prev.map((i) =>
+              i.id === issueId ? { ...i, assignee: undefined } : i,
+            ),
+          );
+        } else {
+          const users = await searchJiraUsers(clientConfig, trimmed);
+          if (users.length === 0) {
+            throw new Error(`No Jira user found matching "${trimmed}"`);
+          }
+          const user = users[0];
+          await assignIssue(clientConfig, issue.key, user.accountId);
+          setIssues((prev) =>
+            prev.map((i) =>
+              i.id === issueId ? { ...i, assignee: user.displayName } : i,
+            ),
+          );
+        }
+      } else if (field === "reporter") {
+        const trimmed = value.trim();
+        if (
+          !trimmed ||
+          trimmed === "-" ||
+          trimmed.toLowerCase() === "unassigned"
+        ) {
+          await updateIssueFields(clientConfig, issue.key, { reporter: null });
+          setIssues((prev) =>
+            prev.map((i) =>
+              i.id === issueId ? { ...i, reporter: undefined } : i,
+            ),
+          );
+        } else {
+          const users = await searchJiraUsers(clientConfig, trimmed);
+          if (users.length === 0) {
+            throw new Error(`No Jira user found matching "${trimmed}"`);
+          }
+          const user = users[0];
+          await updateIssueFields(clientConfig, issue.key, {
+            reporter: { id: user.accountId },
+          });
+          setIssues((prev) =>
+            prev.map((i) =>
+              i.id === issueId ? { ...i, reporter: user.displayName } : i,
+            ),
+          );
+        }
+      }
+      setEditingCell(null);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Failed to update field");
+      }
+    } finally {
+      setSavingCell(false);
+    }
+  };
 
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -490,6 +670,15 @@ export const IssuesPage: React.FC = () => {
                           color: "var(--text-primary)",
                           maxWidth: "400px",
                         }}
+                        onDoubleClick={() => {
+                          if (!savingCell) {
+                            setEditingCell({
+                              issueId: issue.id,
+                              field: "summary",
+                            });
+                            setEditValue(issue.summary);
+                          }
+                        }}
                       >
                         <div
                           style={{
@@ -498,15 +687,100 @@ export const IssuesPage: React.FC = () => {
                             gap: "0.25rem",
                           }}
                         >
-                          <div
-                            style={{
-                              whiteSpace: "nowrap",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                            }}
-                          >
-                            {issue.summary}
-                          </div>
+                          {editingCell?.issueId === issue.id &&
+                          editingCell?.field === "summary" ? (
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "0.5rem",
+                              }}
+                            >
+                              <input
+                                type="text"
+                                className="input-field"
+                                style={{
+                                  width: "100%",
+                                  padding: "2px 6px",
+                                  margin: 0,
+                                  fontSize: "0.85rem",
+                                  background: "rgba(0, 0, 0, 0.5)",
+                                  border: "1px solid var(--accent-secondary)",
+                                }}
+                                value={editValue}
+                                onChange={(e) => setEditValue(e.target.value)}
+                                onBlur={() =>
+                                  handleInlineSave(
+                                    issue.id,
+                                    "summary",
+                                    editValue,
+                                  )
+                                }
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    handleInlineSave(
+                                      issue.id,
+                                      "summary",
+                                      editValue,
+                                    );
+                                  } else if (e.key === "Escape") {
+                                    setEditingCell(null);
+                                  }
+                                }}
+                                autoFocus
+                                disabled={savingCell}
+                              />
+                              {savingCell && (
+                                <span
+                                  className="spinner"
+                                  style={{
+                                    display: "inline-block",
+                                    width: "12px",
+                                    height: "12px",
+                                    border: "1px solid rgba(255,255,255,0.3)",
+                                    borderTop:
+                                      "1px solid var(--accent-secondary)",
+                                    borderRadius: "50%",
+                                    animation: "spin 1s linear infinite",
+                                    flexShrink: 0,
+                                  }}
+                                />
+                              )}
+                            </div>
+                          ) : (
+                            <div
+                              title="Double-click to edit summary"
+                              style={{
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                cursor: "text",
+                                padding: "2px 0",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "0.5rem",
+                              }}
+                            >
+                              <span>{issue.summary}</span>
+                              {savingCell &&
+                                editingCell?.issueId === issue.id &&
+                                editingCell?.field === "summary" && (
+                                  <span
+                                    className="spinner"
+                                    style={{
+                                      display: "inline-block",
+                                      width: "12px",
+                                      height: "12px",
+                                      border: "1px solid rgba(255,255,255,0.3)",
+                                      borderTop:
+                                        "1px solid var(--accent-secondary)",
+                                      borderRadius: "50%",
+                                      animation: "spin 1s linear infinite",
+                                    }}
+                                  />
+                                )}
+                            </div>
+                          )}
                           {issue.blockedBy && issue.blockedBy.length > 0 && (
                             <div
                               style={{
@@ -578,35 +852,342 @@ export const IssuesPage: React.FC = () => {
                           )}
                         </div>
                       </td>
-                      <td style={{ padding: "0.5rem 1rem" }}>
-                        <span
-                          style={{
-                            background: "var(--accent-primary)",
-                            color: "var(--bg-primary)",
-                            padding: "0.1rem 0.5rem",
-                            borderRadius: "4px",
-                            fontSize: "0.75rem",
-                            fontWeight: "600",
-                          }}
-                        >
-                          {issue.status}
-                        </span>
+                      <td
+                        style={{ padding: "0.5rem 1rem", cursor: "pointer" }}
+                        onDoubleClick={() => {
+                          if (!savingCell) {
+                            startEditingStatus(issue);
+                          }
+                        }}
+                      >
+                        {editingCell?.issueId === issue.id &&
+                        editingCell?.field === "status" ? (
+                          loadingTransitionsIssueId === issue.id ? (
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "0.5rem",
+                              }}
+                            >
+                              <div
+                                className="spinner"
+                                style={{
+                                  width: "12px",
+                                  height: "12px",
+                                  border: "1px solid rgba(255,255,255,0.3)",
+                                  borderTop:
+                                    "1px solid var(--accent-secondary)",
+                                  borderRadius: "50%",
+                                  animation: "spin 1s linear infinite",
+                                }}
+                              />
+                              <span
+                                style={{
+                                  fontSize: "0.75rem",
+                                  color: "var(--text-secondary)",
+                                }}
+                              >
+                                Loading...
+                              </span>
+                            </div>
+                          ) : (
+                            <select
+                              className="input-field"
+                              style={{
+                                width: "100%",
+                                padding: "2px 6px",
+                                margin: 0,
+                                fontSize: "0.8rem",
+                                background: "var(--bg-secondary)",
+                                border: "1px solid var(--accent-secondary)",
+                                color: "var(--text-primary)",
+                                borderRadius: "4px",
+                              }}
+                              value={editValue}
+                              onChange={(e) => {
+                                const selectedName = e.target.value;
+                                const tr = transitionsMap[issue.id]?.find(
+                                  (t) => t.name === selectedName,
+                                );
+                                if (tr) {
+                                  handleTransitionSave(
+                                    issue.id,
+                                    tr.id,
+                                    tr.name,
+                                  );
+                                }
+                              }}
+                              onBlur={() => setEditingCell(null)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Escape") {
+                                  setEditingCell(null);
+                                }
+                              }}
+                              autoFocus
+                              disabled={savingCell}
+                            >
+                              <option value={issue.status}>
+                                {issue.status}
+                              </option>
+                              {(transitionsMap[issue.id] || [])
+                                .filter((t) => t.name !== issue.status)
+                                .map((t) => (
+                                  <option key={t.id} value={t.name}>
+                                    {t.name}
+                                  </option>
+                                ))}
+                            </select>
+                          )
+                        ) : (
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "0.5rem",
+                            }}
+                          >
+                            <span
+                              title="Double-click to change status"
+                              style={{
+                                background: "var(--accent-primary)",
+                                color: "var(--bg-primary)",
+                                padding: "0.1rem 0.5rem",
+                                borderRadius: "4px",
+                                fontSize: "0.75rem",
+                                fontWeight: "600",
+                              }}
+                            >
+                              {issue.status}
+                            </span>
+                            {savingCell &&
+                              editingCell?.issueId === issue.id &&
+                              editingCell?.field === "status" && (
+                                <div
+                                  className="spinner"
+                                  style={{
+                                    width: "12px",
+                                    height: "12px",
+                                    border: "1px solid rgba(255,255,255,0.3)",
+                                    borderTop:
+                                      "1px solid var(--accent-secondary)",
+                                    borderRadius: "50%",
+                                    animation: "spin 1s linear infinite",
+                                  }}
+                                />
+                              )}
+                          </div>
+                        )}
                       </td>
                       <td
                         style={{
                           padding: "0.5rem 1rem",
                           color: "var(--text-secondary)",
+                          cursor: "text",
+                        }}
+                        onDoubleClick={() => {
+                          if (!savingCell) {
+                            setEditingCell({
+                              issueId: issue.id,
+                              field: "assignee",
+                            });
+                            setEditValue(issue.assignee || "");
+                          }
                         }}
                       >
-                        {issue.assignee || "-"}
+                        {editingCell?.issueId === issue.id &&
+                        editingCell?.field === "assignee" ? (
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "0.25rem",
+                            }}
+                          >
+                            <input
+                              type="text"
+                              className="input-field"
+                              style={{
+                                width: "100%",
+                                padding: "2px 6px",
+                                margin: 0,
+                                fontSize: "0.85rem",
+                                background: "rgba(0, 0, 0, 0.5)",
+                                border: "1px solid var(--accent-secondary)",
+                              }}
+                              placeholder="Name/Email or -"
+                              value={editValue}
+                              onChange={(e) => setEditValue(e.target.value)}
+                              onBlur={() =>
+                                handleInlineSave(
+                                  issue.id,
+                                  "assignee",
+                                  editValue,
+                                )
+                              }
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  handleInlineSave(
+                                    issue.id,
+                                    "assignee",
+                                    editValue,
+                                  );
+                                } else if (e.key === "Escape") {
+                                  setEditingCell(null);
+                                }
+                              }}
+                              autoFocus
+                              disabled={savingCell}
+                            />
+                            {savingCell && (
+                              <div
+                                className="spinner"
+                                style={{
+                                  width: "12px",
+                                  height: "12px",
+                                  border: "1px solid rgba(255,255,255,0.3)",
+                                  borderTop:
+                                    "1px solid var(--accent-secondary)",
+                                  borderRadius: "50%",
+                                  animation: "spin 1s linear infinite",
+                                  flexShrink: 0,
+                                }}
+                              />
+                            )}
+                          </div>
+                        ) : (
+                          <div
+                            title="Double-click to edit assignee"
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "0.5rem",
+                            }}
+                          >
+                            <span>{issue.assignee || "-"}</span>
+                            {savingCell &&
+                              editingCell?.issueId === issue.id &&
+                              editingCell?.field === "assignee" && (
+                                <div
+                                  className="spinner"
+                                  style={{
+                                    width: "12px",
+                                    height: "12px",
+                                    border: "1px solid rgba(255,255,255,0.3)",
+                                    borderTop:
+                                      "1px solid var(--accent-secondary)",
+                                    borderRadius: "50%",
+                                    animation: "spin 1s linear infinite",
+                                  }}
+                                />
+                              )}
+                          </div>
+                        )}
                       </td>
                       <td
                         style={{
                           padding: "0.5rem 1rem",
                           color: "var(--text-secondary)",
+                          cursor: "text",
+                        }}
+                        onDoubleClick={() => {
+                          if (!savingCell) {
+                            setEditingCell({
+                              issueId: issue.id,
+                              field: "reporter",
+                            });
+                            setEditValue(issue.reporter || "");
+                          }
                         }}
                       >
-                        {issue.reporter || "-"}
+                        {editingCell?.issueId === issue.id &&
+                        editingCell?.field === "reporter" ? (
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "0.25rem",
+                            }}
+                          >
+                            <input
+                              type="text"
+                              className="input-field"
+                              style={{
+                                width: "100%",
+                                padding: "2px 6px",
+                                margin: 0,
+                                fontSize: "0.85rem",
+                                background: "rgba(0, 0, 0, 0.5)",
+                                border: "1px solid var(--accent-secondary)",
+                              }}
+                              placeholder="Name/Email or -"
+                              value={editValue}
+                              onChange={(e) => setEditValue(e.target.value)}
+                              onBlur={() =>
+                                handleInlineSave(
+                                  issue.id,
+                                  "reporter",
+                                  editValue,
+                                )
+                              }
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  handleInlineSave(
+                                    issue.id,
+                                    "reporter",
+                                    editValue,
+                                  );
+                                } else if (e.key === "Escape") {
+                                  setEditingCell(null);
+                                }
+                              }}
+                              autoFocus
+                              disabled={savingCell}
+                            />
+                            {savingCell && (
+                              <div
+                                className="spinner"
+                                style={{
+                                  width: "12px",
+                                  height: "12px",
+                                  border: "1px solid rgba(255,255,255,0.3)",
+                                  borderTop:
+                                    "1px solid var(--accent-secondary)",
+                                  borderRadius: "50%",
+                                  animation: "spin 1s linear infinite",
+                                  flexShrink: 0,
+                                }}
+                              />
+                            )}
+                          </div>
+                        ) : (
+                          <div
+                            title="Double-click to edit reporter"
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "0.5rem",
+                            }}
+                          >
+                            <span>{issue.reporter || "-"}</span>
+                            {savingCell &&
+                              editingCell?.issueId === issue.id &&
+                              editingCell?.field === "reporter" && (
+                                <div
+                                  className="spinner"
+                                  style={{
+                                    width: "12px",
+                                    height: "12px",
+                                    border: "1px solid rgba(255,255,255,0.3)",
+                                    borderTop:
+                                      "1px solid var(--accent-secondary)",
+                                    borderRadius: "50%",
+                                    animation: "spin 1s linear infinite",
+                                  }}
+                                />
+                              )}
+                          </div>
+                        )}
                       </td>
                       <td
                         style={{

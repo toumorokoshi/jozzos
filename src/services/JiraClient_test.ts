@@ -1,5 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { getIssuesByFilter } from "./JiraClient";
+import {
+  getIssuesByFilter,
+  updateIssueFields,
+  getAvailableTransitions,
+  transitionIssue,
+  assignIssue,
+  searchJiraUsers,
+} from "./JiraClient";
 
 describe("JiraClient", () => {
   const mockConfig = {
@@ -179,5 +186,102 @@ describe("JiraClient", () => {
     await expect(getIssuesByFilter(mockConfig, "10001")).rejects.toThrow(
       "Jira API Error: 401 Unauthorized - Invalid token",
     );
+  });
+
+  describe("updateIssueFields", () => {
+    it("should send PUT request to update fields", async () => {
+      const mockResponse = { ok: true };
+      vi.mocked(fetch).mockResolvedValue(mockResponse as unknown as Response);
+
+      await updateIssueFields(mockConfig, "TEST-1", {
+        summary: "Updated Summary",
+      });
+
+      expect(fetch).toHaveBeenCalledWith(
+        "https://test-domain.atlassian.net/rest/api/3/issue/TEST-1",
+        expect.objectContaining({
+          method: "PUT",
+          body: JSON.stringify({ fields: { summary: "Updated Summary" } }),
+        }),
+      );
+    });
+  });
+
+  describe("getAvailableTransitions", () => {
+    it("should fetch transitions and map them", async () => {
+      const mockResponse = {
+        ok: true,
+        json: async () => ({
+          transitions: [
+            { id: "11", name: "To Do" },
+            { id: "21", name: "In Progress" },
+          ],
+        }),
+      };
+      vi.mocked(fetch).mockResolvedValue(mockResponse as unknown as Response);
+
+      const transitions = await getAvailableTransitions(mockConfig, "TEST-1");
+
+      expect(fetch).toHaveBeenCalledWith(
+        "https://test-domain.atlassian.net/rest/api/3/issue/TEST-1/transitions",
+        expect.objectContaining({ method: "GET" }),
+      );
+      expect(transitions).toEqual([
+        { id: "11", name: "To Do" },
+        { id: "21", name: "In Progress" },
+      ]);
+    });
+  });
+
+  describe("transitionIssue", () => {
+    it("should send POST request to transition issue", async () => {
+      const mockResponse = { ok: true };
+      vi.mocked(fetch).mockResolvedValue(mockResponse as unknown as Response);
+
+      await transitionIssue(mockConfig, "TEST-1", "21");
+
+      expect(fetch).toHaveBeenCalledWith(
+        "https://test-domain.atlassian.net/rest/api/3/issue/TEST-1/transitions",
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({ transition: { id: "21" } }),
+        }),
+      );
+    });
+  });
+
+  describe("assignIssue", () => {
+    it("should send PUT request to assign issue", async () => {
+      const mockResponse = { ok: true };
+      vi.mocked(fetch).mockResolvedValue(mockResponse as unknown as Response);
+
+      await assignIssue(mockConfig, "TEST-1", "user-acc-id");
+
+      expect(fetch).toHaveBeenCalledWith(
+        "https://test-domain.atlassian.net/rest/api/3/issue/TEST-1/assignee",
+        expect.objectContaining({
+          method: "PUT",
+          body: JSON.stringify({ accountId: "user-acc-id" }),
+        }),
+      );
+    });
+  });
+
+  describe("searchJiraUsers", () => {
+    it("should send GET request to search users", async () => {
+      const mockResponse = {
+        ok: true,
+        json: async () => [{ accountId: "123", displayName: "Alice" }],
+      };
+      vi.mocked(fetch).mockResolvedValue(mockResponse as unknown as Response);
+
+      const users = await searchJiraUsers(mockConfig, "Alice");
+
+      expect(fetch).toHaveBeenCalledWith(
+        "https://test-domain.atlassian.net/rest/api/3/user/search?query=Alice",
+        expect.objectContaining({ method: "GET" }),
+      );
+      expect(users).toEqual([{ accountId: "123", displayName: "Alice" }]);
+    });
   });
 });

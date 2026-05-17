@@ -162,3 +162,149 @@ export const getIssuesByFilter = async (
     };
   });
 };
+
+export const updateIssueFields = async (
+  config: IssueTrackerConfig,
+  issueIdOrKey: string,
+  fields: Record<string, unknown>,
+): Promise<void> => {
+  const useProxy = config.useProxy !== false;
+  const baseUri = useProxy ? "/api/jira" : `https://${config.jiraDomain}`;
+  const url = `${baseUri}/rest/api/3/issue/${issueIdOrKey}`;
+
+  const headers = getAuthHeaders(config) as Record<string, string>;
+  if (useProxy && config.jiraDomain) {
+    headers["x-jira-domain"] = config.jiraDomain;
+  }
+
+  const response = await fetch(url, {
+    method: "PUT",
+    headers,
+    body: JSON.stringify({ fields }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `Jira API Error: ${response.status} ${response.statusText} - ${errorText}`,
+    );
+  }
+};
+
+export const getAvailableTransitions = async (
+  config: IssueTrackerConfig,
+  issueIdOrKey: string,
+): Promise<{ id: string; name: string }[]> => {
+  const useProxy = config.useProxy !== false;
+  const baseUri = useProxy ? "/api/jira" : `https://${config.jiraDomain}`;
+  const url = `${baseUri}/rest/api/3/issue/${issueIdOrKey}/transitions`;
+
+  const headers = getAuthHeaders(config) as Record<string, string>;
+  if (useProxy && config.jiraDomain) {
+    headers["x-jira-domain"] = config.jiraDomain;
+  }
+
+  const response = await fetch(url, {
+    method: "GET",
+    headers,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `Jira API Error: ${response.status} ${response.statusText} - ${errorText}`,
+    );
+  }
+
+  const data = await response.json();
+  return (data.transitions || []).map((t: { id: string; name: string }) => ({
+    id: t.id,
+    name: t.name,
+  }));
+};
+
+export const transitionIssue = async (
+  config: IssueTrackerConfig,
+  issueIdOrKey: string,
+  transitionId: string,
+): Promise<void> => {
+  const useProxy = config.useProxy !== false;
+  const baseUri = useProxy ? "/api/jira" : `https://${config.jiraDomain}`;
+  const url = `${baseUri}/rest/api/3/issue/${issueIdOrKey}/transitions`;
+
+  const headers = getAuthHeaders(config) as Record<string, string>;
+  if (useProxy && config.jiraDomain) {
+    headers["x-jira-domain"] = config.jiraDomain;
+  }
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ transition: { id: transitionId } }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `Jira API Error: ${response.status} ${response.statusText} - ${errorText}`,
+    );
+  }
+};
+
+export const assignIssue = async (
+  config: IssueTrackerConfig,
+  issueIdOrKey: string,
+  accountId: string | null,
+): Promise<void> => {
+  const useProxy = config.useProxy !== false;
+  const baseUri = useProxy ? "/api/jira" : `https://${config.jiraDomain}`;
+  const url = `${baseUri}/rest/api/3/issue/${issueIdOrKey}/assignee`;
+
+  const headers = getAuthHeaders(config) as Record<string, string>;
+  if (useProxy && config.jiraDomain) {
+    headers["x-jira-domain"] = config.jiraDomain;
+  }
+
+  const response = await fetch(url, {
+    method: "PUT",
+    headers,
+    body: JSON.stringify({ accountId }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `Jira API Error: ${response.status} ${response.statusText} - ${errorText}`,
+    );
+  }
+};
+
+export const searchJiraUsers = async (
+  config: IssueTrackerConfig,
+  query: string,
+): Promise<{ accountId: string; displayName: string }[]> => {
+  const useProxy = config.useProxy !== false;
+  const baseUri = useProxy ? "/api/jira" : `https://${config.jiraDomain}`;
+  const url = `${baseUri}/rest/api/3/user/search?query=${encodeURIComponent(
+    query,
+  )}`;
+
+  const headers = getAuthHeaders(config) as Record<string, string>;
+  if (useProxy && config.jiraDomain) {
+    headers["x-jira-domain"] = config.jiraDomain;
+  }
+
+  const response = await fetch(url, {
+    method: "GET",
+    headers,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `Jira API Error: ${response.status} ${response.statusText} - ${errorText}`,
+    );
+  }
+
+  return await response.json();
+};
