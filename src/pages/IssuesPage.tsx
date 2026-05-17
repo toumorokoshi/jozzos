@@ -6,11 +6,48 @@ import {
   transitionIssue,
   assignIssue,
   searchJiraUsers,
+  getJiraFields,
+  type JiraField,
 } from "../services/JiraClient";
 import type { Issue } from "../models/Issue";
 import { useConfig } from "../context/ConfigContext";
 
 const MAX_HISTORY_LENGTH = 1000;
+
+interface ColumnConfig {
+  id: string;
+  name: string;
+  isCustom?: boolean;
+}
+
+const DEFAULT_COLUMNS: ColumnConfig[] = [
+  { id: "key", name: "Key" },
+  { id: "summary", name: "Summary" },
+  { id: "status", name: "Status" },
+  { id: "assignee", name: "Assignee" },
+  { id: "reporter", name: "Reporter" },
+];
+
+const formatFieldValue = (val: unknown): string => {
+  if (val === null || val === undefined) return "-";
+  if (typeof val === "string") return val;
+  if (typeof val === "number") return val.toString();
+  if (typeof val === "boolean") return val ? "Yes" : "No";
+  if (Array.isArray(val)) {
+    return val.map((v) => formatFieldValue(v)).join(", ");
+  }
+  if (typeof val === "object") {
+    const obj = val as Record<string, unknown>;
+    if (obj.value !== undefined) return formatFieldValue(obj.value);
+    if (obj.name !== undefined) return formatFieldValue(obj.name);
+    if (obj.displayName !== undefined) return formatFieldValue(obj.displayName);
+    if (obj.content && Array.isArray(obj.content)) {
+      return "[Rich Text]";
+    }
+    return JSON.stringify(val);
+  }
+  return String(val);
+};
 
 export const IssuesPage: React.FC = () => {
   const { apiKey, userEmail, jiraDomain } = useConfig();
@@ -20,6 +57,189 @@ export const IssuesPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [expandedIssues, setExpandedIssues] = useState<Set<string>>(new Set());
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
+
+  const [activeColumns, setActiveColumns] = useState<ColumnConfig[]>(() => {
+    const saved = localStorage.getItem("jozzos_active_columns");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Failed to parse active columns", e);
+      }
+    }
+    return DEFAULT_COLUMNS;
+  });
+
+  const saveActiveColumns = (cols: ColumnConfig[]) => {
+    setActiveColumns(cols);
+    localStorage.setItem("jozzos_active_columns", JSON.stringify(cols));
+  };
+
+  const [allColumns, setAllColumns] = useState<ColumnConfig[]>(() => {
+    const saved = localStorage.getItem("jozzos_all_columns");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Failed to parse all columns", e);
+      }
+    }
+    return [
+      { id: "key", name: "Key" },
+      { id: "summary", name: "Summary" },
+      { id: "status", name: "Status" },
+      { id: "assignee", name: "Assignee" },
+      { id: "reporter", name: "Reporter" },
+      { id: "created", name: "Created" },
+      { id: "updated", name: "Updated" },
+    ];
+  });
+
+  const saveAllColumns = (cols: ColumnConfig[]) => {
+    setAllColumns(cols);
+    localStorage.setItem("jozzos_all_columns", JSON.stringify(cols));
+  };
+
+  const [isConfigOpen, setIsConfigOpen] = useState(false);
+  const [availableCustomFields, setAvailableCustomFields] = useState<
+    JiraField[]
+  >([]);
+
+  const [selectedJiraFieldId, setSelectedJiraFieldId] = useState("");
+  const [manualFieldId, setManualFieldId] = useState("");
+  const [manualFieldName, setManualFieldName] = useState("");
+
+  React.useEffect(() => {
+    const fetchFields = async () => {
+      if (!apiKey || !jiraDomain) return;
+      try {
+        const clientConfig = {
+          apiToken: apiKey,
+          userEmail: userEmail,
+          jiraDomain: jiraDomain,
+          useProxy: true,
+        };
+        const fields = await getJiraFields(clientConfig);
+        const customOrNav = fields.filter(
+          (f) =>
+            f.navigable &&
+            ![
+              "key",
+              "summary",
+              "status",
+              "assignee",
+              "reporter",
+              "created",
+              "updated",
+            ].includes(f.id),
+        );
+        setAvailableCustomFields(customOrNav);
+      } catch (e) {
+        console.error("Failed to fetch Jira fields", e);
+      }
+    };
+    fetchFields();
+  }, [apiKey, userEmail, jiraDomain]);
+
+  const moveColumn = (index: number, direction: number) => {
+    const nextIndex = index + direction;
+    if (nextIndex < 0 || nextIndex >= activeColumns.length) return;
+    const nextCols = [...activeColumns];
+    const temp = nextCols[index];
+    nextCols[index] = nextCols[nextIndex];
+    nextCols[nextIndex] = temp;
+    saveActiveColumns(nextCols);
+  };
+
+  const toggleColumnActive = (colId: string) => {
+    const isActive = activeColumns.some((col) => col.id === colId);
+    if (isActive) {
+      if (colId === "key" || colId === "summary") return;
+      const nextCols = activeColumns.filter((col) => col.id !== colId);
+      saveActiveColumns(nextCols);
+    } else {
+      const colToActivate =
+        allColumns.find((col) => col.id === colId) ||
+        availableCustomFields.find((f) => f.id === colId);
+
+      if (colToActivate) {
+        const newCol: ColumnConfig = {
+          id: colToActivate.id,
+          name: colToActivate.name,
+          isCustom:
+            "custom" in colToActivate
+              ? colToActivate.custom
+              : (colToActivate as ColumnConfig).isCustom,
+        };
+        const nextCols = [...activeColumns, newCol];
+        saveActiveColumns(nextCols);
+
+        if (!allColumns.some((c) => c.id === colId)) {
+          saveAllColumns([...allColumns, newCol]);
+        }
+      }
+    }
+  };
+
+  const handleAddSelectedJiraField = () => {
+    if (!selectedJiraFieldId) return;
+    const field = availableCustomFields.find(
+      (f) => f.id === selectedJiraFieldId,
+    );
+    if (!field) return;
+
+    if (activeColumns.some((col) => col.id === field.id)) {
+      setSelectedJiraFieldId("");
+      return;
+    }
+
+    const newCol: ColumnConfig = {
+      id: field.id,
+      name: field.name,
+      isCustom: true,
+    };
+
+    const nextActive = [...activeColumns, newCol];
+    saveActiveColumns(nextActive);
+
+    if (!allColumns.some((col) => col.id === field.id)) {
+      saveAllColumns([...allColumns, newCol]);
+    }
+
+    setSelectedJiraFieldId("");
+  };
+
+  const handleAddManualCustomField = () => {
+    const trimmedId = manualFieldId.trim();
+    const trimmedName = manualFieldName.trim();
+    if (!trimmedId || !trimmedName) return;
+
+    if (activeColumns.some((col) => col.id === trimmedId)) {
+      setManualFieldId("");
+      setManualFieldName("");
+      return;
+    }
+
+    const newCol: ColumnConfig = {
+      id: trimmedId,
+      name: trimmedName,
+      isCustom: true,
+    };
+
+    const nextActive = [...activeColumns, newCol];
+    saveActiveColumns(nextActive);
+
+    if (!allColumns.some((col) => col.id === trimmedId)) {
+      saveAllColumns([...allColumns, newCol]);
+    }
+
+    setManualFieldId("");
+    setManualFieldName("");
+  };
+
+  const resetColumnsToDefault = () => {
+    saveActiveColumns(DEFAULT_COLUMNS);
+  };
 
   // States for inline double-click editing
   const [editingCell, setEditingCell] = useState<{
@@ -266,6 +486,15 @@ export const IssuesPage: React.FC = () => {
     setIssues([]);
 
     try {
+      const extraFields = activeColumns
+        .filter(
+          (col) =>
+            !["key", "summary", "status", "assignee", "reporter"].includes(
+              col.id,
+            ),
+        )
+        .map((col) => col.id);
+
       const results = await getIssuesByFilter(
         {
           apiToken: apiKey,
@@ -274,6 +503,7 @@ export const IssuesPage: React.FC = () => {
           useProxy: true,
         },
         filterId,
+        extraFields,
       );
 
       setIssues(results);
@@ -325,6 +555,46 @@ export const IssuesPage: React.FC = () => {
           disabled={loading}
         >
           {loading ? "Searching..." : "Search"}
+        </button>
+        <button
+          className="glass-panel"
+          style={{
+            padding: "0.5rem 1.25rem",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.5rem",
+            cursor: "pointer",
+            background: "rgba(255, 255, 255, 0.05)",
+            border: "1px solid rgba(255, 255, 255, 0.15)",
+            borderRadius: "6px",
+            color: "var(--text-primary)",
+            transition: "all var(--transition-fast)",
+            height: "100%",
+            margin: 0,
+          }}
+          onClick={() => setIsConfigOpen(true)}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "rgba(102, 252, 241, 0.1)";
+            e.currentTarget.style.borderColor = "var(--accent-secondary)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
+            e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.15)";
+          }}
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M12 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-7m0-18H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h7m0-18v18"></path>
+          </svg>
+          Columns
         </button>
       </div>
 
@@ -431,6 +701,7 @@ export const IssuesPage: React.FC = () => {
               }}
             >
               <tr>
+                {/* 1. Prefix Chevron Column Header */}
                 <th
                   style={{
                     padding: "0.5rem 0.5rem",
@@ -439,50 +710,29 @@ export const IssuesPage: React.FC = () => {
                     textAlign: "center",
                   }}
                 ></th>
-                <th
-                  style={{
-                    padding: "0.5rem 1rem",
-                    borderBottom: "1px solid var(--border-color)",
-                    width: "120px",
-                  }}
-                >
-                  Key
-                </th>
-                <th
-                  style={{
-                    padding: "0.5rem 1rem",
-                    borderBottom: "1px solid var(--border-color)",
-                  }}
-                >
-                  Summary
-                </th>
-                <th
-                  style={{
-                    padding: "0.5rem 1rem",
-                    borderBottom: "1px solid var(--border-color)",
-                    width: "150px",
-                  }}
-                >
-                  Status
-                </th>
-                <th
-                  style={{
-                    padding: "0.5rem 1rem",
-                    borderBottom: "1px solid var(--border-color)",
-                    width: "150px",
-                  }}
-                >
-                  Assignee
-                </th>
-                <th
-                  style={{
-                    padding: "0.5rem 1rem",
-                    borderBottom: "1px solid var(--border-color)",
-                    width: "150px",
-                  }}
-                >
-                  Reporter
-                </th>
+
+                {/* 2. Dynamic Configurable Columns Header */}
+                {activeColumns.map((col) => (
+                  <th
+                    key={col.id}
+                    style={{
+                      padding: "0.5rem 1rem",
+                      borderBottom: "1px solid var(--border-color)",
+                      width:
+                        col.id === "key"
+                          ? "120px"
+                          : col.id === "status" ||
+                              col.id === "assignee" ||
+                              col.id === "reporter"
+                            ? "150px"
+                            : undefined,
+                    }}
+                  >
+                    {col.name}
+                  </th>
+                ))}
+
+                {/* 3. Suffix Details Column Header */}
                 <th
                   style={{
                     padding: "0.5rem 1rem",
@@ -499,7 +749,7 @@ export const IssuesPage: React.FC = () => {
               {issues.length === 0 && !loading && (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={activeColumns.length + 2}
                     style={{
                       padding: "2rem",
                       textAlign: "center",
@@ -513,7 +763,7 @@ export const IssuesPage: React.FC = () => {
               {loading && (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={activeColumns.length + 2}
                     style={{ padding: "2rem", textAlign: "center" }}
                   >
                     <div
@@ -549,6 +799,7 @@ export const IssuesPage: React.FC = () => {
                           "rgba(11, 12, 16, 0.4)")
                       }
                     >
+                      {/* 1. Prefix Chevron Cell */}
                       <td
                         style={{
                           padding: "0.5rem 0.5rem",
@@ -611,584 +862,672 @@ export const IssuesPage: React.FC = () => {
                             </button>
                           )}
                       </td>
-                      <td style={{ padding: "0.5rem 1rem" }}>
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "0.5rem",
-                          }}
-                        >
-                          <a
-                            href={issue.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
+
+                      {/* 2. Dynamic Content Cells */}
+                      {activeColumns.map((col) => {
+                        if (col.id === "key") {
+                          return (
+                            <td key={col.id} style={{ padding: "0.5rem 1rem" }}>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "0.5rem",
+                                }}
+                              >
+                                <a
+                                  href={issue.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  style={{
+                                    color: "var(--accent-secondary)",
+                                    textDecoration: "none",
+                                    fontWeight: "500",
+                                  }}
+                                >
+                                  {issue.key}
+                                </a>
+                                {issue.blockedBy &&
+                                  issue.blockedBy.length > 0 && (
+                                    <span
+                                      title={`Blocked by ${issue.blockedBy.map((b) => b.key).join(", ")}`}
+                                      style={{
+                                        color: "#ff6b6b",
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                      }}
+                                    >
+                                      <svg
+                                        width="12"
+                                        height="12"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="3"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                      >
+                                        <rect
+                                          x="3"
+                                          y="11"
+                                          width="18"
+                                          height="11"
+                                          rx="2"
+                                          ry="2"
+                                        ></rect>
+                                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                                      </svg>
+                                    </span>
+                                  )}
+                              </div>
+                            </td>
+                          );
+                        }
+
+                        if (col.id === "summary") {
+                          return (
+                            <td
+                              key={col.id}
+                              style={{
+                                padding: "0.5rem 1rem",
+                                color: "var(--text-primary)",
+                                maxWidth: "400px",
+                              }}
+                              onDoubleClick={() => {
+                                if (!savingCell) {
+                                  setEditingCell({
+                                    issueId: issue.id,
+                                    field: "summary",
+                                  });
+                                  setEditValue(issue.summary);
+                                }
+                              }}
+                            >
+                              <div
+                                style={{
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  gap: "0.25rem",
+                                }}
+                              >
+                                {editingCell?.issueId === issue.id &&
+                                editingCell?.field === "summary" ? (
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: "0.5rem",
+                                    }}
+                                  >
+                                    <input
+                                      type="text"
+                                      className="input-field"
+                                      style={{
+                                        width: "100%",
+                                        padding: "2px 6px",
+                                        margin: 0,
+                                        fontSize: "0.85rem",
+                                        background: "rgba(0, 0, 0, 0.5)",
+                                        border:
+                                          "1px solid var(--accent-secondary)",
+                                      }}
+                                      value={editValue}
+                                      onChange={(e) =>
+                                        setEditValue(e.target.value)
+                                      }
+                                      onBlur={() =>
+                                        handleInlineSave(
+                                          issue.id,
+                                          "summary",
+                                          editValue,
+                                        )
+                                      }
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                          handleInlineSave(
+                                            issue.id,
+                                            "summary",
+                                            editValue,
+                                          );
+                                        } else if (e.key === "Escape") {
+                                          setEditingCell(null);
+                                        }
+                                      }}
+                                      autoFocus
+                                      disabled={savingCell}
+                                    />
+                                    {savingCell && (
+                                      <span
+                                        className="spinner"
+                                        style={{
+                                          display: "inline-block",
+                                          width: "12px",
+                                          height: "12px",
+                                          border:
+                                            "1px solid rgba(255,255,255,0.3)",
+                                          borderTop:
+                                            "1px solid var(--accent-secondary)",
+                                          borderRadius: "50%",
+                                          animation: "spin 1s linear infinite",
+                                          flexShrink: 0,
+                                        }}
+                                      />
+                                    )}
+                                  </div>
+                                ) : (
+                                  <div
+                                    title="Double-click to edit summary"
+                                    style={{
+                                      whiteSpace: "nowrap",
+                                      overflow: "hidden",
+                                      textOverflow: "ellipsis",
+                                      cursor: "text",
+                                      padding: "2px 0",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: "0.5rem",
+                                    }}
+                                  >
+                                    <span>{issue.summary}</span>
+                                    {savingCell &&
+                                      editingCell?.issueId === issue.id &&
+                                      editingCell?.field === "summary" && (
+                                        <span
+                                          className="spinner"
+                                          style={{
+                                            display: "inline-block",
+                                            width: "12px",
+                                            height: "12px",
+                                            border:
+                                              "1px solid rgba(255,255,255,0.3)",
+                                            borderTop:
+                                              "1px solid var(--accent-secondary)",
+                                            borderRadius: "50%",
+                                            animation:
+                                              "spin 1s linear infinite",
+                                          }}
+                                        />
+                                      )}
+                                  </div>
+                                )}
+                                {issue.blockedBy &&
+                                  issue.blockedBy.length > 0 && (
+                                    <div
+                                      style={{
+                                        display: "flex",
+                                        gap: "0.35rem",
+                                        flexWrap: "wrap",
+                                      }}
+                                    >
+                                      {issue.blockedBy.map((blocker) => (
+                                        <a
+                                          key={blocker.id}
+                                          href={blocker.url}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          onClick={(e) => e.stopPropagation()}
+                                          title={`Blocked by ${blocker.key}: ${blocker.summary}`}
+                                          style={{
+                                            display: "inline-flex",
+                                            alignItems: "center",
+                                            gap: "0.25rem",
+                                            background:
+                                              "rgba(255, 107, 107, 0.12)",
+                                            border:
+                                              "1px solid rgba(255, 107, 107, 0.25)",
+                                            color: "#ff8787",
+                                            padding: "0.1rem 0.4rem",
+                                            borderRadius: "4px",
+                                            fontSize: "0.7rem",
+                                            fontWeight: "600",
+                                            textDecoration: "none",
+                                            transition:
+                                              "all var(--transition-fast)",
+                                          }}
+                                          onMouseEnter={(e) => {
+                                            e.currentTarget.style.background =
+                                              "rgba(255, 107, 107, 0.25)";
+                                            e.currentTarget.style.borderColor =
+                                              "#ff6b6b";
+                                          }}
+                                          onMouseLeave={(e) => {
+                                            e.currentTarget.style.background =
+                                              "rgba(255, 107, 107, 0.12)";
+                                            e.currentTarget.style.borderColor =
+                                              "rgba(255, 107, 107, 0.25)";
+                                          }}
+                                        >
+                                          <svg
+                                            width="10"
+                                            height="10"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="3"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                          >
+                                            <rect
+                                              x="3"
+                                              y="11"
+                                              width="18"
+                                              height="11"
+                                              rx="2"
+                                              ry="2"
+                                            ></rect>
+                                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                                          </svg>
+                                          <span>Blocked by {blocker.key}</span>
+                                        </a>
+                                      ))}
+                                    </div>
+                                  )}
+                              </div>
+                            </td>
+                          );
+                        }
+
+                        if (col.id === "status") {
+                          return (
+                            <td
+                              key={col.id}
+                              style={{
+                                padding: "0.5rem 1rem",
+                                cursor: "pointer",
+                              }}
+                              onDoubleClick={() => {
+                                if (!savingCell) {
+                                  startEditingStatus(issue);
+                                }
+                              }}
+                            >
+                              {editingCell?.issueId === issue.id &&
+                              editingCell?.field === "status" ? (
+                                loadingTransitionsIssueId === issue.id ? (
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: "0.5rem",
+                                    }}
+                                  >
+                                    <div
+                                      className="spinner"
+                                      style={{
+                                        width: "12px",
+                                        height: "12px",
+                                        border:
+                                          "1px solid rgba(255,255,255,0.3)",
+                                        borderTop:
+                                          "1px solid var(--accent-secondary)",
+                                        borderRadius: "50%",
+                                        animation: "spin 1s linear infinite",
+                                      }}
+                                    />
+                                    <span
+                                      style={{
+                                        fontSize: "0.75rem",
+                                        color: "var(--text-secondary)",
+                                      }}
+                                    >
+                                      Loading...
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <select
+                                    className="input-field"
+                                    style={{
+                                      width: "100%",
+                                      padding: "2px 6px",
+                                      margin: 0,
+                                      fontSize: "0.8rem",
+                                      background: "var(--bg-secondary)",
+                                      border:
+                                        "1px solid var(--accent-secondary)",
+                                      color: "var(--text-primary)",
+                                      borderRadius: "4px",
+                                    }}
+                                    value={editValue}
+                                    onChange={(e) => {
+                                      const selectedName = e.target.value;
+                                      const tr = transitionsMap[issue.id]?.find(
+                                        (t) => t.name === selectedName,
+                                      );
+                                      if (tr) {
+                                        handleTransitionSave(
+                                          issue.id,
+                                          tr.id,
+                                          tr.name,
+                                        );
+                                      }
+                                    }}
+                                    onBlur={() => setEditingCell(null)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Escape") {
+                                        setEditingCell(null);
+                                      }
+                                    }}
+                                    autoFocus
+                                    disabled={savingCell}
+                                  >
+                                    <option value={issue.status}>
+                                      {issue.status}
+                                    </option>
+                                    {(transitionsMap[issue.id] || [])
+                                      .filter((t) => t.name !== issue.status)
+                                      .map((t) => (
+                                        <option key={t.id} value={t.name}>
+                                          {t.name}
+                                        </option>
+                                      ))}
+                                  </select>
+                                )
+                              ) : (
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "0.5rem",
+                                  }}
+                                >
+                                  <span
+                                    title="Double-click to change status"
+                                    style={{
+                                      background: "var(--accent-primary)",
+                                      color: "var(--bg-primary)",
+                                      padding: "0.1rem 0.5rem",
+                                      borderRadius: "4px",
+                                      fontSize: "0.75rem",
+                                      fontWeight: "600",
+                                    }}
+                                  >
+                                    {issue.status}
+                                  </span>
+                                  {savingCell &&
+                                    editingCell?.issueId === issue.id &&
+                                    editingCell?.field === "status" && (
+                                      <div
+                                        className="spinner"
+                                        style={{
+                                          width: "12px",
+                                          height: "12px",
+                                          border:
+                                            "1px solid rgba(255,255,255,0.3)",
+                                          borderTop:
+                                            "1px solid var(--accent-secondary)",
+                                          borderRadius: "50%",
+                                          animation: "spin 1s linear infinite",
+                                        }}
+                                      />
+                                    )}
+                                </div>
+                              )}
+                            </td>
+                          );
+                        }
+
+                        if (col.id === "assignee") {
+                          return (
+                            <td
+                              key={col.id}
+                              style={{
+                                padding: "0.5rem 1rem",
+                                color: "var(--text-secondary)",
+                                cursor: "text",
+                              }}
+                              onDoubleClick={() => {
+                                if (!savingCell) {
+                                  setEditingCell({
+                                    issueId: issue.id,
+                                    field: "assignee",
+                                  });
+                                  setEditValue(issue.assignee || "");
+                                }
+                              }}
+                            >
+                              {editingCell?.issueId === issue.id &&
+                              editingCell?.field === "assignee" ? (
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "0.25rem",
+                                  }}
+                                >
+                                  <input
+                                    type="text"
+                                    className="input-field"
+                                    style={{
+                                      width: "100%",
+                                      padding: "2px 6px",
+                                      margin: 0,
+                                      fontSize: "0.85rem",
+                                      background: "rgba(0, 0, 0, 0.5)",
+                                      border:
+                                        "1px solid var(--accent-secondary)",
+                                    }}
+                                    placeholder="Name/Email or -"
+                                    value={editValue}
+                                    onChange={(e) =>
+                                      setEditValue(e.target.value)
+                                    }
+                                    onBlur={() =>
+                                      handleInlineSave(
+                                        issue.id,
+                                        "assignee",
+                                        editValue,
+                                      )
+                                    }
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        handleInlineSave(
+                                          issue.id,
+                                          "assignee",
+                                          editValue,
+                                        );
+                                      } else if (e.key === "Escape") {
+                                        setEditingCell(null);
+                                      }
+                                    }}
+                                    autoFocus
+                                    disabled={savingCell}
+                                  />
+                                  {savingCell && (
+                                    <div
+                                      className="spinner"
+                                      style={{
+                                        width: "12px",
+                                        height: "12px",
+                                        border:
+                                          "1px solid rgba(255,255,255,0.3)",
+                                        borderTop:
+                                          "1px solid var(--accent-secondary)",
+                                        borderRadius: "50%",
+                                        animation: "spin 1s linear infinite",
+                                        flexShrink: 0,
+                                      }}
+                                    />
+                                  )}
+                                </div>
+                              ) : (
+                                <div
+                                  title="Double-click to edit assignee"
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "0.5rem",
+                                  }}
+                                >
+                                  <span>{issue.assignee || "-"}</span>
+                                  {savingCell &&
+                                    editingCell?.issueId === issue.id &&
+                                    editingCell?.field === "assignee" && (
+                                      <div
+                                        className="spinner"
+                                        style={{
+                                          width: "12px",
+                                          height: "12px",
+                                          border:
+                                            "1px solid rgba(255,255,255,0.3)",
+                                          borderTop:
+                                            "1px solid var(--accent-secondary)",
+                                          borderRadius: "50%",
+                                          animation: "spin 1s linear infinite",
+                                        }}
+                                      />
+                                    )}
+                                </div>
+                              )}
+                            </td>
+                          );
+                        }
+
+                        if (col.id === "reporter") {
+                          return (
+                            <td
+                              key={col.id}
+                              style={{
+                                padding: "0.5rem 1rem",
+                                color: "var(--text-secondary)",
+                                cursor: "text",
+                              }}
+                              onDoubleClick={() => {
+                                if (!savingCell) {
+                                  setEditingCell({
+                                    issueId: issue.id,
+                                    field: "reporter",
+                                  });
+                                  setEditValue(issue.reporter || "");
+                                }
+                              }}
+                            >
+                              {editingCell?.issueId === issue.id &&
+                              editingCell?.field === "reporter" ? (
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "0.25rem",
+                                  }}
+                                >
+                                  <input
+                                    type="text"
+                                    className="input-field"
+                                    style={{
+                                      width: "100%",
+                                      padding: "2px 6px",
+                                      margin: 0,
+                                      fontSize: "0.85rem",
+                                      background: "rgba(0, 0, 0, 0.5)",
+                                      border:
+                                        "1px solid var(--accent-secondary)",
+                                    }}
+                                    placeholder="Name/Email or -"
+                                    value={editValue}
+                                    onChange={(e) =>
+                                      setEditValue(e.target.value)
+                                    }
+                                    onBlur={() =>
+                                      handleInlineSave(
+                                        issue.id,
+                                        "reporter",
+                                        editValue,
+                                      )
+                                    }
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        handleInlineSave(
+                                          issue.id,
+                                          "reporter",
+                                          editValue,
+                                        );
+                                      } else if (e.key === "Escape") {
+                                        setEditingCell(null);
+                                      }
+                                    }}
+                                    autoFocus
+                                    disabled={savingCell}
+                                  />
+                                  {savingCell && (
+                                    <div
+                                      className="spinner"
+                                      style={{
+                                        width: "12px",
+                                        height: "12px",
+                                        border:
+                                          "1px solid rgba(255,255,255,0.3)",
+                                        borderTop:
+                                          "1px solid var(--accent-secondary)",
+                                        borderRadius: "50%",
+                                        animation: "spin 1s linear infinite",
+                                        flexShrink: 0,
+                                      }}
+                                    />
+                                  )}
+                                </div>
+                              ) : (
+                                <div
+                                  title="Double-click to edit reporter"
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "0.5rem",
+                                  }}
+                                >
+                                  <span>{issue.reporter || "-"}</span>
+                                  {savingCell &&
+                                    editingCell?.issueId === issue.id &&
+                                    editingCell?.field === "reporter" && (
+                                      <div
+                                        className="spinner"
+                                        style={{
+                                          width: "12px",
+                                          height: "12px",
+                                          border:
+                                            "1px solid rgba(255,255,255,0.3)",
+                                          borderTop:
+                                            "1px solid var(--accent-secondary)",
+                                          borderRadius: "50%",
+                                          animation: "spin 1s linear infinite",
+                                        }}
+                                      />
+                                    )}
+                                </div>
+                              )}
+                            </td>
+                          );
+                        }
+
+                        // Render other fields or custom fields
+                        const val = issue.customFields
+                          ? issue.customFields[col.id]
+                          : (issue as unknown as Record<string, unknown>)[
+                              col.id
+                            ];
+                        return (
+                          <td
+                            key={col.id}
                             style={{
-                              color: "var(--accent-secondary)",
-                              textDecoration: "none",
-                              fontWeight: "500",
+                              padding: "0.5rem 1rem",
+                              color: "var(--text-secondary)",
                             }}
                           >
-                            {issue.key}
-                          </a>
-                          {issue.blockedBy && issue.blockedBy.length > 0 && (
-                            <span
-                              title={`Blocked by ${issue.blockedBy.map((b) => b.key).join(", ")}`}
-                              style={{
-                                color: "#ff6b6b",
-                                display: "inline-flex",
-                                alignItems: "center",
-                              }}
-                            >
-                              <svg
-                                width="12"
-                                height="12"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="3"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              >
-                                <rect
-                                  x="3"
-                                  y="11"
-                                  width="18"
-                                  height="11"
-                                  rx="2"
-                                  ry="2"
-                                ></rect>
-                                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                              </svg>
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td
-                        style={{
-                          padding: "0.5rem 1rem",
-                          color: "var(--text-primary)",
-                          maxWidth: "400px",
-                        }}
-                        onDoubleClick={() => {
-                          if (!savingCell) {
-                            setEditingCell({
-                              issueId: issue.id,
-                              field: "summary",
-                            });
-                            setEditValue(issue.summary);
-                          }
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: "0.25rem",
-                          }}
-                        >
-                          {editingCell?.issueId === issue.id &&
-                          editingCell?.field === "summary" ? (
                             <div
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "0.5rem",
-                              }}
-                            >
-                              <input
-                                type="text"
-                                className="input-field"
-                                style={{
-                                  width: "100%",
-                                  padding: "2px 6px",
-                                  margin: 0,
-                                  fontSize: "0.85rem",
-                                  background: "rgba(0, 0, 0, 0.5)",
-                                  border: "1px solid var(--accent-secondary)",
-                                }}
-                                value={editValue}
-                                onChange={(e) => setEditValue(e.target.value)}
-                                onBlur={() =>
-                                  handleInlineSave(
-                                    issue.id,
-                                    "summary",
-                                    editValue,
-                                  )
-                                }
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") {
-                                    handleInlineSave(
-                                      issue.id,
-                                      "summary",
-                                      editValue,
-                                    );
-                                  } else if (e.key === "Escape") {
-                                    setEditingCell(null);
-                                  }
-                                }}
-                                autoFocus
-                                disabled={savingCell}
-                              />
-                              {savingCell && (
-                                <span
-                                  className="spinner"
-                                  style={{
-                                    display: "inline-block",
-                                    width: "12px",
-                                    height: "12px",
-                                    border: "1px solid rgba(255,255,255,0.3)",
-                                    borderTop:
-                                      "1px solid var(--accent-secondary)",
-                                    borderRadius: "50%",
-                                    animation: "spin 1s linear infinite",
-                                    flexShrink: 0,
-                                  }}
-                                />
-                              )}
-                            </div>
-                          ) : (
-                            <div
-                              title="Double-click to edit summary"
                               style={{
                                 whiteSpace: "nowrap",
                                 overflow: "hidden",
                                 textOverflow: "ellipsis",
-                                cursor: "text",
-                                padding: "2px 0",
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "0.5rem",
+                                maxWidth: "200px",
                               }}
+                              title={formatFieldValue(val)}
                             >
-                              <span>{issue.summary}</span>
-                              {savingCell &&
-                                editingCell?.issueId === issue.id &&
-                                editingCell?.field === "summary" && (
-                                  <span
-                                    className="spinner"
-                                    style={{
-                                      display: "inline-block",
-                                      width: "12px",
-                                      height: "12px",
-                                      border: "1px solid rgba(255,255,255,0.3)",
-                                      borderTop:
-                                        "1px solid var(--accent-secondary)",
-                                      borderRadius: "50%",
-                                      animation: "spin 1s linear infinite",
-                                    }}
-                                  />
-                                )}
+                              {formatFieldValue(val)}
                             </div>
-                          )}
-                          {issue.blockedBy && issue.blockedBy.length > 0 && (
-                            <div
-                              style={{
-                                display: "flex",
-                                gap: "0.35rem",
-                                flexWrap: "wrap",
-                              }}
-                            >
-                              {issue.blockedBy.map((blocker) => (
-                                <a
-                                  key={blocker.id}
-                                  href={blocker.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  onClick={(e) => e.stopPropagation()}
-                                  title={`Blocked by ${blocker.key}: ${blocker.summary}`}
-                                  style={{
-                                    display: "inline-flex",
-                                    alignItems: "center",
-                                    gap: "0.25rem",
-                                    background: "rgba(255, 107, 107, 0.12)",
-                                    border:
-                                      "1px solid rgba(255, 107, 107, 0.25)",
-                                    color: "#ff8787",
-                                    padding: "0.1rem 0.4rem",
-                                    borderRadius: "4px",
-                                    fontSize: "0.7rem",
-                                    fontWeight: "600",
-                                    textDecoration: "none",
-                                    transition: "all var(--transition-fast)",
-                                  }}
-                                  onMouseEnter={(e) => {
-                                    e.currentTarget.style.background =
-                                      "rgba(255, 107, 107, 0.25)";
-                                    e.currentTarget.style.borderColor =
-                                      "#ff6b6b";
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    e.currentTarget.style.background =
-                                      "rgba(255, 107, 107, 0.12)";
-                                    e.currentTarget.style.borderColor =
-                                      "rgba(255, 107, 107, 0.25)";
-                                  }}
-                                >
-                                  <svg
-                                    width="10"
-                                    height="10"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="3"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                  >
-                                    <rect
-                                      x="3"
-                                      y="11"
-                                      width="18"
-                                      height="11"
-                                      rx="2"
-                                      ry="2"
-                                    ></rect>
-                                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                                  </svg>
-                                  <span>Blocked by {blocker.key}</span>
-                                </a>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td
-                        style={{ padding: "0.5rem 1rem", cursor: "pointer" }}
-                        onDoubleClick={() => {
-                          if (!savingCell) {
-                            startEditingStatus(issue);
-                          }
-                        }}
-                      >
-                        {editingCell?.issueId === issue.id &&
-                        editingCell?.field === "status" ? (
-                          loadingTransitionsIssueId === issue.id ? (
-                            <div
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "0.5rem",
-                              }}
-                            >
-                              <div
-                                className="spinner"
-                                style={{
-                                  width: "12px",
-                                  height: "12px",
-                                  border: "1px solid rgba(255,255,255,0.3)",
-                                  borderTop:
-                                    "1px solid var(--accent-secondary)",
-                                  borderRadius: "50%",
-                                  animation: "spin 1s linear infinite",
-                                }}
-                              />
-                              <span
-                                style={{
-                                  fontSize: "0.75rem",
-                                  color: "var(--text-secondary)",
-                                }}
-                              >
-                                Loading...
-                              </span>
-                            </div>
-                          ) : (
-                            <select
-                              className="input-field"
-                              style={{
-                                width: "100%",
-                                padding: "2px 6px",
-                                margin: 0,
-                                fontSize: "0.8rem",
-                                background: "var(--bg-secondary)",
-                                border: "1px solid var(--accent-secondary)",
-                                color: "var(--text-primary)",
-                                borderRadius: "4px",
-                              }}
-                              value={editValue}
-                              onChange={(e) => {
-                                const selectedName = e.target.value;
-                                const tr = transitionsMap[issue.id]?.find(
-                                  (t) => t.name === selectedName,
-                                );
-                                if (tr) {
-                                  handleTransitionSave(
-                                    issue.id,
-                                    tr.id,
-                                    tr.name,
-                                  );
-                                }
-                              }}
-                              onBlur={() => setEditingCell(null)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Escape") {
-                                  setEditingCell(null);
-                                }
-                              }}
-                              autoFocus
-                              disabled={savingCell}
-                            >
-                              <option value={issue.status}>
-                                {issue.status}
-                              </option>
-                              {(transitionsMap[issue.id] || [])
-                                .filter((t) => t.name !== issue.status)
-                                .map((t) => (
-                                  <option key={t.id} value={t.name}>
-                                    {t.name}
-                                  </option>
-                                ))}
-                            </select>
-                          )
-                        ) : (
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "0.5rem",
-                            }}
-                          >
-                            <span
-                              title="Double-click to change status"
-                              style={{
-                                background: "var(--accent-primary)",
-                                color: "var(--bg-primary)",
-                                padding: "0.1rem 0.5rem",
-                                borderRadius: "4px",
-                                fontSize: "0.75rem",
-                                fontWeight: "600",
-                              }}
-                            >
-                              {issue.status}
-                            </span>
-                            {savingCell &&
-                              editingCell?.issueId === issue.id &&
-                              editingCell?.field === "status" && (
-                                <div
-                                  className="spinner"
-                                  style={{
-                                    width: "12px",
-                                    height: "12px",
-                                    border: "1px solid rgba(255,255,255,0.3)",
-                                    borderTop:
-                                      "1px solid var(--accent-secondary)",
-                                    borderRadius: "50%",
-                                    animation: "spin 1s linear infinite",
-                                  }}
-                                />
-                              )}
-                          </div>
-                        )}
-                      </td>
-                      <td
-                        style={{
-                          padding: "0.5rem 1rem",
-                          color: "var(--text-secondary)",
-                          cursor: "text",
-                        }}
-                        onDoubleClick={() => {
-                          if (!savingCell) {
-                            setEditingCell({
-                              issueId: issue.id,
-                              field: "assignee",
-                            });
-                            setEditValue(issue.assignee || "");
-                          }
-                        }}
-                      >
-                        {editingCell?.issueId === issue.id &&
-                        editingCell?.field === "assignee" ? (
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "0.25rem",
-                            }}
-                          >
-                            <input
-                              type="text"
-                              className="input-field"
-                              style={{
-                                width: "100%",
-                                padding: "2px 6px",
-                                margin: 0,
-                                fontSize: "0.85rem",
-                                background: "rgba(0, 0, 0, 0.5)",
-                                border: "1px solid var(--accent-secondary)",
-                              }}
-                              placeholder="Name/Email or -"
-                              value={editValue}
-                              onChange={(e) => setEditValue(e.target.value)}
-                              onBlur={() =>
-                                handleInlineSave(
-                                  issue.id,
-                                  "assignee",
-                                  editValue,
-                                )
-                              }
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  handleInlineSave(
-                                    issue.id,
-                                    "assignee",
-                                    editValue,
-                                  );
-                                } else if (e.key === "Escape") {
-                                  setEditingCell(null);
-                                }
-                              }}
-                              autoFocus
-                              disabled={savingCell}
-                            />
-                            {savingCell && (
-                              <div
-                                className="spinner"
-                                style={{
-                                  width: "12px",
-                                  height: "12px",
-                                  border: "1px solid rgba(255,255,255,0.3)",
-                                  borderTop:
-                                    "1px solid var(--accent-secondary)",
-                                  borderRadius: "50%",
-                                  animation: "spin 1s linear infinite",
-                                  flexShrink: 0,
-                                }}
-                              />
-                            )}
-                          </div>
-                        ) : (
-                          <div
-                            title="Double-click to edit assignee"
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "0.5rem",
-                            }}
-                          >
-                            <span>{issue.assignee || "-"}</span>
-                            {savingCell &&
-                              editingCell?.issueId === issue.id &&
-                              editingCell?.field === "assignee" && (
-                                <div
-                                  className="spinner"
-                                  style={{
-                                    width: "12px",
-                                    height: "12px",
-                                    border: "1px solid rgba(255,255,255,0.3)",
-                                    borderTop:
-                                      "1px solid var(--accent-secondary)",
-                                    borderRadius: "50%",
-                                    animation: "spin 1s linear infinite",
-                                  }}
-                                />
-                              )}
-                          </div>
-                        )}
-                      </td>
-                      <td
-                        style={{
-                          padding: "0.5rem 1rem",
-                          color: "var(--text-secondary)",
-                          cursor: "text",
-                        }}
-                        onDoubleClick={() => {
-                          if (!savingCell) {
-                            setEditingCell({
-                              issueId: issue.id,
-                              field: "reporter",
-                            });
-                            setEditValue(issue.reporter || "");
-                          }
-                        }}
-                      >
-                        {editingCell?.issueId === issue.id &&
-                        editingCell?.field === "reporter" ? (
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "0.25rem",
-                            }}
-                          >
-                            <input
-                              type="text"
-                              className="input-field"
-                              style={{
-                                width: "100%",
-                                padding: "2px 6px",
-                                margin: 0,
-                                fontSize: "0.85rem",
-                                background: "rgba(0, 0, 0, 0.5)",
-                                border: "1px solid var(--accent-secondary)",
-                              }}
-                              placeholder="Name/Email or -"
-                              value={editValue}
-                              onChange={(e) => setEditValue(e.target.value)}
-                              onBlur={() =>
-                                handleInlineSave(
-                                  issue.id,
-                                  "reporter",
-                                  editValue,
-                                )
-                              }
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  handleInlineSave(
-                                    issue.id,
-                                    "reporter",
-                                    editValue,
-                                  );
-                                } else if (e.key === "Escape") {
-                                  setEditingCell(null);
-                                }
-                              }}
-                              autoFocus
-                              disabled={savingCell}
-                            />
-                            {savingCell && (
-                              <div
-                                className="spinner"
-                                style={{
-                                  width: "12px",
-                                  height: "12px",
-                                  border: "1px solid rgba(255,255,255,0.3)",
-                                  borderTop:
-                                    "1px solid var(--accent-secondary)",
-                                  borderRadius: "50%",
-                                  animation: "spin 1s linear infinite",
-                                  flexShrink: 0,
-                                }}
-                              />
-                            )}
-                          </div>
-                        ) : (
-                          <div
-                            title="Double-click to edit reporter"
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "0.5rem",
-                            }}
-                          >
-                            <span>{issue.reporter || "-"}</span>
-                            {savingCell &&
-                              editingCell?.issueId === issue.id &&
-                              editingCell?.field === "reporter" && (
-                                <div
-                                  className="spinner"
-                                  style={{
-                                    width: "12px",
-                                    height: "12px",
-                                    border: "1px solid rgba(255,255,255,0.3)",
-                                    borderTop:
-                                      "1px solid var(--accent-secondary)",
-                                    borderRadius: "50%",
-                                    animation: "spin 1s linear infinite",
-                                  }}
-                                />
-                              )}
-                          </div>
-                        )}
-                      </td>
+                          </td>
+                        );
+                      })}
+
+                      {/* 3. Suffix Details Cell */}
                       <td
                         style={{
                           padding: "0.5rem 1rem",
@@ -1252,6 +1591,7 @@ export const IssuesPage: React.FC = () => {
                             background: "rgba(255, 255, 255, 0.02)",
                           }}
                         >
+                          {/* 1. Indentation Arrow prefix */}
                           <td
                             style={{
                               padding: "0.5rem 0.5rem",
@@ -1273,75 +1613,112 @@ export const IssuesPage: React.FC = () => {
                               <path d="M9 18l6-6-6-6"></path>
                             </svg>
                           </td>
-                          <td style={{ padding: "0.5rem 1rem 0.5rem 2rem" }}>
-                            <div
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "0.35rem",
-                              }}
-                            >
-                              <svg
-                                width="10"
-                                height="10"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="#ff6b6b"
-                                strokeWidth="2.5"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                style={{ flexShrink: 0 }}
-                              >
-                                <rect
-                                  x="3"
-                                  y="11"
-                                  width="18"
-                                  height="11"
-                                  rx="2"
-                                  ry="2"
-                                ></rect>
-                                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                              </svg>
-                              <a
-                                href={blocker.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
+
+                          {/* 2. Dynamic Blocker columns alignment */}
+                          {activeColumns.map((col) => {
+                            if (col.id === "key") {
+                              return (
+                                <td
+                                  key={col.id}
+                                  style={{ padding: "0.5rem 1rem 0.5rem 2rem" }}
+                                >
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: "0.35rem",
+                                    }}
+                                  >
+                                    <svg
+                                      width="10"
+                                      height="10"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="#ff6b6b"
+                                      strokeWidth="2.5"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      style={{ flexShrink: 0 }}
+                                    >
+                                      <rect
+                                        x="3"
+                                        y="11"
+                                        width="18"
+                                        height="11"
+                                        rx="2"
+                                        ry="2"
+                                      ></rect>
+                                      <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                                    </svg>
+                                    <a
+                                      href={blocker.url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      style={{
+                                        color: "#ff6b6b",
+                                        textDecoration: "none",
+                                        fontSize: "0.8rem",
+                                        fontWeight: "600",
+                                      }}
+                                    >
+                                      {blocker.key}
+                                    </a>
+                                  </div>
+                                </td>
+                              );
+                            }
+                            if (col.id === "summary") {
+                              return (
+                                <td
+                                  key={col.id}
+                                  style={{
+                                    padding: "0.5rem 1rem",
+                                    color: "var(--text-secondary)",
+                                    fontSize: "0.8rem",
+                                    fontStyle: "italic",
+                                  }}
+                                >
+                                  {blocker.summary}
+                                </td>
+                              );
+                            }
+                            if (col.id === "status") {
+                              return (
+                                <td
+                                  key={col.id}
+                                  style={{ padding: "0.5rem 1rem" }}
+                                >
+                                  <span
+                                    style={{
+                                      background: "rgba(255, 107, 107, 0.15)",
+                                      color: "#ff8787",
+                                      padding: "0.05rem 0.4rem",
+                                      borderRadius: "4px",
+                                      fontSize: "0.7rem",
+                                      fontWeight: "600",
+                                    }}
+                                  >
+                                    {blocker.status}
+                                  </span>
+                                </td>
+                              );
+                            }
+                            // Rest of the columns render empty dash
+                            return (
+                              <td
+                                key={col.id}
                                 style={{
-                                  color: "#ff6b6b",
-                                  textDecoration: "none",
-                                  fontSize: "0.8rem",
-                                  fontWeight: "600",
+                                  padding: "0.5rem 1rem",
+                                  color: "rgba(255,255,255,0.15)",
                                 }}
                               >
-                                {blocker.key}
-                              </a>
-                            </div>
-                          </td>
-                          <td
-                            style={{
-                              padding: "0.5rem 1rem",
-                              color: "var(--text-secondary)",
-                              fontSize: "0.8rem",
-                              fontStyle: "italic",
-                            }}
-                          >
-                            {blocker.summary}
-                          </td>
-                          <td style={{ padding: "0.5rem 1rem" }}>
-                            <span
-                              style={{
-                                background: "rgba(255, 107, 107, 0.15)",
-                                color: "#ff8787",
-                                padding: "0.05rem 0.4rem",
-                                borderRadius: "4px",
-                                fontSize: "0.7rem",
-                                fontWeight: "600",
-                              }}
-                            >
-                              {blocker.status}
-                            </span>
-                          </td>
-                          <td colSpan={3}></td>
+                                -
+                              </td>
+                            );
+                          })}
+
+                          {/* 3. Suffix empty details cell */}
+                          <td></td>
                         </tr>
                       ))}
                   </React.Fragment>
@@ -1368,6 +1745,10 @@ export const IssuesPage: React.FC = () => {
             opacity: 1;
             transform: scale(1) translateY(0);
           }
+        }
+        @keyframes drawerSlideIn {
+          from { transform: translateX(100%); }
+          to { transform: translateX(0); }
         }
       `}</style>
 
@@ -2201,6 +2582,631 @@ export const IssuesPage: React.FC = () => {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Dynamic Columns Configuration Drawer */}
+      {isConfigOpen && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            backgroundColor: "rgba(11, 12, 16, 0.6)",
+            backdropFilter: "blur(4px)",
+            WebkitBackdropFilter: "blur(4px)",
+            zIndex: 1100,
+            display: "flex",
+            justifyContent: "flex-end",
+            animation: "modalFadeIn 0.25s ease-out forwards",
+          }}
+          onClick={() => setIsConfigOpen(false)}
+        >
+          <div
+            style={{
+              width: "450px",
+              maxWidth: "100vw",
+              height: "100%",
+              background: "var(--background-dark)",
+              borderLeft: "1px solid var(--border-color)",
+              boxShadow: "-10px 0 30px rgba(0, 0, 0, 0.5)",
+              display: "flex",
+              flexDirection: "column",
+              animation:
+                "drawerSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div
+              style={{
+                padding: "1.5rem",
+                borderBottom: "1px solid var(--border-color)",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <div>
+                <h3
+                  style={{
+                    margin: 0,
+                    color: "var(--text-primary)",
+                    fontSize: "1.2rem",
+                    fontWeight: "600",
+                  }}
+                >
+                  Configure Columns
+                </h3>
+                <p
+                  style={{
+                    margin: "0.25rem 0 0",
+                    fontSize: "0.75rem",
+                    color: "var(--text-secondary)",
+                  }}
+                >
+                  Reorder, toggle, or add custom fields to list view
+                </p>
+              </div>
+              <button
+                onClick={() => setIsConfigOpen(false)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "var(--text-secondary)",
+                  cursor: "pointer",
+                  padding: "0.25rem",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: "50%",
+                  transition: "background 0.2s",
+                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.background =
+                    "rgba(255, 255, 255, 0.05)")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.background = "transparent")
+                }
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+
+            {/* Scrollable Content */}
+            <div
+              style={{
+                flex: 1,
+                overflowY: "auto",
+                padding: "1.5rem",
+                display: "flex",
+                flexDirection: "column",
+                gap: "1.5rem",
+              }}
+            >
+              {/* Section 1: Active Columns (Reorder & Toggle) */}
+              <div>
+                <h4
+                  style={{
+                    margin: "0 0 0.75rem 0",
+                    color: "var(--text-primary)",
+                    fontSize: "0.9rem",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                  }}
+                >
+                  Active Columns ({activeColumns.length})
+                </h4>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.5rem",
+                  }}
+                >
+                  {activeColumns.map((col, index) => {
+                    const isCore = col.id === "key" || col.id === "summary";
+                    return (
+                      <div
+                        key={col.id}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          padding: "0.6rem 0.75rem",
+                          background: "rgba(255, 255, 255, 0.03)",
+                          border: "1px solid var(--border-color)",
+                          borderRadius: "8px",
+                          gap: "0.5rem",
+                        }}
+                      >
+                        {/* Drag indicator & label */}
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.5rem",
+                            flex: 1,
+                            minWidth: 0,
+                          }}
+                        >
+                          <div
+                            style={{
+                              color: "var(--text-secondary)",
+                              cursor: "grab",
+                              display: "flex",
+                              alignItems: "center",
+                            }}
+                          >
+                            <svg
+                              width="14"
+                              height="14"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                            >
+                              <circle cx="9" cy="5" r="1"></circle>
+                              <circle cx="9" cy="12" r="1"></circle>
+                              <circle cx="9" cy="19" r="1"></circle>
+                              <circle cx="15" cy="5" r="1"></circle>
+                              <circle cx="15" cy="12" r="1"></circle>
+                              <circle cx="15" cy="19" r="1"></circle>
+                            </svg>
+                          </div>
+                          <span
+                            style={{
+                              color: "var(--text-primary)",
+                              fontSize: "0.85rem",
+                              fontWeight: "500",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {col.name}
+                          </span>
+                          {col.isCustom && (
+                            <span
+                              style={{
+                                background: "rgba(102, 252, 241, 0.1)",
+                                color: "var(--accent-primary)",
+                                fontSize: "0.65rem",
+                                padding: "0.1rem 0.3rem",
+                                borderRadius: "4px",
+                                textTransform: "uppercase",
+                              }}
+                            >
+                              Jira Custom
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Reorder & toggle controls */}
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.25rem",
+                          }}
+                        >
+                          {/* Move Up */}
+                          <button
+                            onClick={() => moveColumn(index, -1)}
+                            disabled={index === 0}
+                            style={{
+                              background: "none",
+                              border: "none",
+                              color:
+                                index === 0
+                                  ? "rgba(255,255,255,0.15)"
+                                  : "var(--text-secondary)",
+                              cursor: index === 0 ? "not-allowed" : "pointer",
+                              padding: "0.2rem",
+                              borderRadius: "4px",
+                            }}
+                          >
+                            <svg
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                            >
+                              <polyline points="18 15 12 9 6 15"></polyline>
+                            </svg>
+                          </button>
+
+                          {/* Move Down */}
+                          <button
+                            onClick={() => moveColumn(index, 1)}
+                            disabled={index === activeColumns.length - 1}
+                            style={{
+                              background: "none",
+                              border: "none",
+                              color:
+                                index === activeColumns.length - 1
+                                  ? "rgba(255,255,255,0.15)"
+                                  : "var(--text-secondary)",
+                              cursor:
+                                index === activeColumns.length - 1
+                                  ? "not-allowed"
+                                  : "pointer",
+                              padding: "0.2rem",
+                              borderRadius: "4px",
+                            }}
+                          >
+                            <svg
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                            >
+                              <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                          </button>
+
+                          {/* Toggle active / deactivate */}
+                          <button
+                            onClick={() => toggleColumnActive(col.id)}
+                            disabled={isCore}
+                            style={{
+                              background: "none",
+                              border: "none",
+                              color: isCore
+                                ? "rgba(255,255,255,0.1)"
+                                : "#ff6b6b",
+                              cursor: isCore ? "not-allowed" : "pointer",
+                              padding: "0.2rem",
+                              marginLeft: "0.25rem",
+                              borderRadius: "4px",
+                            }}
+                            title={
+                              isCore
+                                ? "Core column cannot be removed"
+                                : "Remove column"
+                            }
+                          >
+                            <svg
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                            >
+                              <circle cx="12" cy="12" r="10"></circle>
+                              <line x1="15" y1="9" x2="9" y2="15"></line>
+                              <line x1="9" y1="9" x2="15" y2="15"></line>
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Section 2: Inactive Standard/Custom Columns */}
+              {allColumns.filter(
+                (c) => !activeColumns.some((ac) => ac.id === c.id),
+              ).length > 0 && (
+                <div>
+                  <h4
+                    style={{
+                      margin: "0 0 0.75rem 0",
+                      color: "var(--text-primary)",
+                      fontSize: "0.9rem",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                    }}
+                  >
+                    Available Columns
+                  </h4>
+                  <div
+                    style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}
+                  >
+                    {allColumns
+                      .filter(
+                        (c) => !activeColumns.some((ac) => ac.id === c.id),
+                      )
+                      .map((col) => (
+                        <button
+                          key={col.id}
+                          onClick={() => toggleColumnActive(col.id)}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.35rem",
+                            padding: "0.4rem 0.75rem",
+                            background: "rgba(255,255,255,0.03)",
+                            border: "1px dashed var(--border-color)",
+                            borderRadius: "20px",
+                            color: "var(--text-secondary)",
+                            cursor: "pointer",
+                            fontSize: "0.8rem",
+                            transition: "all 0.2s",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.borderColor =
+                              "var(--accent-primary)";
+                            e.currentTarget.style.color = "var(--text-primary)";
+                            e.currentTarget.style.background =
+                              "rgba(102, 252, 241, 0.05)";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.borderColor =
+                              "var(--border-color)";
+                            e.currentTarget.style.color =
+                              "var(--text-secondary)";
+                            e.currentTarget.style.background =
+                              "rgba(255,255,255,0.03)";
+                          }}
+                        >
+                          <svg
+                            width="12"
+                            height="12"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.5"
+                          >
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                          </svg>
+                          {col.name}
+                        </button>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Section 3: Add Jira Custom Field */}
+              <div
+                style={{
+                  borderTop: "1px solid var(--border-color)",
+                  paddingTop: "1.5rem",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "1rem",
+                }}
+              >
+                <h4
+                  style={{
+                    margin: 0,
+                    color: "var(--text-primary)",
+                    fontSize: "0.9rem",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                  }}
+                >
+                  Add Jira Custom Field
+                </h4>
+
+                {/* Option A: Select from Server */}
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.4rem",
+                  }}
+                >
+                  <label
+                    style={{
+                      fontSize: "0.75rem",
+                      color: "var(--text-secondary)",
+                      fontWeight: "500",
+                    }}
+                  >
+                    Select from Jira Server fields:
+                  </label>
+                  <div style={{ display: "flex", gap: "0.5rem" }}>
+                    <select
+                      value={selectedJiraFieldId}
+                      onChange={(e) => setSelectedJiraFieldId(e.target.value)}
+                      style={{
+                        flex: 1,
+                        background: "var(--background-dark)",
+                        border: "1px solid var(--border-color)",
+                        borderRadius: "8px",
+                        color: "var(--text-primary)",
+                        padding: "0.5rem",
+                        fontSize: "0.85rem",
+                        outline: "none",
+                      }}
+                    >
+                      <option value="">-- Choose Field --</option>
+                      {availableCustomFields.map((field) => (
+                        <option key={field.id} value={field.id}>
+                          {field.name} ({field.id})
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={handleAddSelectedJiraField}
+                      disabled={!selectedJiraFieldId}
+                      style={{
+                        padding: "0 1rem",
+                        background: selectedJiraFieldId
+                          ? "var(--accent-primary)"
+                          : "rgba(255,255,255,0.05)",
+                        border: "none",
+                        borderRadius: "8px",
+                        color: selectedJiraFieldId
+                          ? "var(--background-dark)"
+                          : "var(--text-secondary)",
+                        cursor: selectedJiraFieldId ? "pointer" : "not-allowed",
+                        fontSize: "0.8rem",
+                        fontWeight: "600",
+                        transition: "all 0.2s",
+                      }}
+                    >
+                      Add
+                    </button>
+                  </div>
+                </div>
+
+                {/* Option B: Manual Add */}
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.5rem",
+                    background: "rgba(255,255,255,0.01)",
+                    padding: "0.75rem",
+                    borderRadius: "8px",
+                    border: "1px solid rgba(255,255,255,0.03)",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: "0.75rem",
+                      color: "var(--text-secondary)",
+                      fontWeight: "600",
+                    }}
+                  >
+                    Or add custom field manually:
+                  </span>
+
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: "0.5rem",
+                    }}
+                  >
+                    <input
+                      type="text"
+                      placeholder="Field ID (e.g. customfield_10010)"
+                      value={manualFieldId}
+                      onChange={(e) => setManualFieldId(e.target.value)}
+                      style={{
+                        background: "var(--background-dark)",
+                        border: "1px solid var(--border-color)",
+                        borderRadius: "6px",
+                        color: "var(--text-primary)",
+                        padding: "0.4rem 0.6rem",
+                        fontSize: "0.8rem",
+                        outline: "none",
+                      }}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Field Name (e.g. Story Points)"
+                      value={manualFieldName}
+                      onChange={(e) => setManualFieldName(e.target.value)}
+                      style={{
+                        background: "var(--background-dark)",
+                        border: "1px solid var(--border-color)",
+                        borderRadius: "6px",
+                        color: "var(--text-primary)",
+                        padding: "0.4rem 0.6rem",
+                        fontSize: "0.8rem",
+                        outline: "none",
+                      }}
+                    />
+                  </div>
+
+                  <button
+                    onClick={handleAddManualCustomField}
+                    disabled={!manualFieldId.trim() || !manualFieldName.trim()}
+                    style={{
+                      width: "100%",
+                      padding: "0.5rem",
+                      background:
+                        manualFieldId.trim() && manualFieldName.trim()
+                          ? "rgba(102, 252, 241, 0.1)"
+                          : "rgba(255,255,255,0.02)",
+                      border:
+                        manualFieldId.trim() && manualFieldName.trim()
+                          ? "1px solid var(--accent-primary)"
+                          : "1px solid var(--border-color)",
+                      borderRadius: "6px",
+                      color:
+                        manualFieldId.trim() && manualFieldName.trim()
+                          ? "var(--accent-primary)"
+                          : "var(--text-secondary)",
+                      cursor:
+                        manualFieldId.trim() && manualFieldName.trim()
+                          ? "pointer"
+                          : "not-allowed",
+                      fontSize: "0.8rem",
+                      fontWeight: "600",
+                      transition: "all 0.2s",
+                    }}
+                  >
+                    Add Custom Field
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer / Reset */}
+            <div
+              style={{
+                padding: "1.25rem 1.5rem",
+                borderTop: "1px solid var(--border-color)",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                background: "rgba(0,0,0,0.1)",
+              }}
+            >
+              <button
+                onClick={resetColumnsToDefault}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "#ff6b6b",
+                  cursor: "pointer",
+                  fontSize: "0.8rem",
+                  fontWeight: "500",
+                  textDecoration: "underline",
+                }}
+              >
+                Reset to Default
+              </button>
+              <button
+                onClick={() => setIsConfigOpen(false)}
+                style={{
+                  padding: "0.5rem 1.5rem",
+                  background: "var(--accent-primary)",
+                  border: "none",
+                  borderRadius: "8px",
+                  color: "var(--background-dark)",
+                  cursor: "pointer",
+                  fontSize: "0.85rem",
+                  fontWeight: "600",
+                  boxShadow: "0 0 10px rgba(102, 252, 241, 0.2)",
+                  transition: "transform 0.1s",
+                }}
+                onMouseDown={(e) =>
+                  (e.currentTarget.style.transform = "scale(0.97)")
+                }
+                onMouseUp={(e) =>
+                  (e.currentTarget.style.transform = "scale(1)")
+                }
+              >
+                Done
+              </button>
             </div>
           </div>
         </div>

@@ -13,6 +13,7 @@ export interface Issue {
   priority?: string;
   created?: string;
   updated?: string;
+  customFields?: Record<string, unknown>;
 }
 
 export interface IssueTrackerConfig {

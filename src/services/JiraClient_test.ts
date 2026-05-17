@@ -6,6 +6,7 @@ import {
   transitionIssue,
   assignIssue,
   searchJiraUsers,
+  getJiraFields,
 } from "./JiraClient";
 
 describe("JiraClient", () => {
@@ -78,6 +79,17 @@ describe("JiraClient", () => {
       priority: "High",
       created: "2026-05-16T12:00:00.000Z",
       updated: "2026-05-16T13:00:00.000Z",
+      customFields: {
+        summary: "Test Issue",
+        status: { name: "In Progress" },
+        assignee: { displayName: "John Doe" },
+        reporter: { displayName: "Jane Doe" },
+        issuelinks: [],
+        description: { type: "doc", content: [] },
+        priority: { name: "High" },
+        created: "2026-05-16T12:00:00.000Z",
+        updated: "2026-05-16T13:00:00.000Z",
+      },
     });
   });
 
@@ -282,6 +294,74 @@ describe("JiraClient", () => {
         expect.objectContaining({ method: "GET" }),
       );
       expect(users).toEqual([{ accountId: "123", displayName: "Alice" }]);
+    });
+  });
+
+  describe("getJiraFields", () => {
+    it("should send GET request to fetch available fields", async () => {
+      const mockResponse = {
+        ok: true,
+        json: async () => [
+          {
+            id: "customfield_10010",
+            name: "Sprint",
+            custom: true,
+            navigable: true,
+            searchable: true,
+          },
+        ],
+      };
+      vi.mocked(fetch).mockResolvedValue(mockResponse as unknown as Response);
+
+      const fields = await getJiraFields(mockConfig);
+
+      expect(fetch).toHaveBeenCalledWith(
+        "https://test-domain.atlassian.net/rest/api/3/field",
+        expect.objectContaining({ method: "GET" }),
+      );
+      expect(fields).toEqual([
+        {
+          id: "customfield_10010",
+          name: "Sprint",
+          custom: true,
+          navigable: true,
+          searchable: true,
+        },
+      ]);
+    });
+  });
+
+  describe("getIssuesByFilter with extra fields", () => {
+    it("should request extra fields in the search JQL parameters", async () => {
+      const mockResponse = {
+        ok: true,
+        json: async () => ({
+          issues: [
+            {
+              id: "1001",
+              key: "TEST-1",
+              fields: {
+                summary: "Test Issue",
+                status: { name: "In Progress" },
+                customfield_10010: ["Sprint 1"],
+              },
+            },
+          ],
+        }),
+      };
+      vi.mocked(fetch).mockResolvedValue(mockResponse as unknown as Response);
+
+      const issues = await getIssuesByFilter(mockConfig, "TEST-1", [
+        "customfield_10010",
+      ]);
+
+      expect(fetch).toHaveBeenCalledWith(
+        expect.stringContaining(
+          "fields=summary,status,assignee,reporter,issuelinks,description,priority,created,updated,customfield_10010",
+        ),
+        expect.any(Object),
+      );
+      expect(issues[0].customFields?.customfield_10010).toEqual(["Sprint 1"]);
     });
   });
 });

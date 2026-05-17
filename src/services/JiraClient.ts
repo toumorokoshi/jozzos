@@ -59,12 +59,22 @@ interface JiraIssueResponse {
     priority?: { name?: string };
     created?: string;
     updated?: string;
+    [key: string]: unknown;
   };
+}
+
+export interface JiraField {
+  id: string;
+  name: string;
+  custom: boolean;
+  navigable: boolean;
+  searchable: boolean;
 }
 
 export const getIssuesByFilter = async (
   config: IssueTrackerConfig,
   filterIdOrJql: string,
+  extraFields?: string[],
 ): Promise<Issue[]> => {
   const useProxy = config.useProxy !== false;
   const baseUri = useProxy ? "/api/jira" : `https://${config.jiraDomain}`;
@@ -75,9 +85,23 @@ export const getIssuesByFilter = async (
     jql = `filter=${filterIdOrJql}`;
   }
 
+  const defaultFields = [
+    "summary",
+    "status",
+    "assignee",
+    "reporter",
+    "issuelinks",
+    "description",
+    "priority",
+    "created",
+    "updated",
+  ];
+  const fieldsSet = new Set([...defaultFields, ...(extraFields || [])]);
+  const fieldsParam = Array.from(fieldsSet).join(",");
+
   const url = `${baseUri}/rest/api/3/search/jql?jql=${encodeURIComponent(
     jql,
-  )}&fields=summary,status,assignee,reporter,issuelinks,description,priority,created,updated`;
+  )}&fields=${fieldsParam}`;
 
   const headers = getAuthHeaders(config) as Record<string, string>;
   if (useProxy && config.jiraDomain) {
@@ -98,69 +122,106 @@ export const getIssuesByFilter = async (
 
   const data = await response.json();
 
-  return data.issues.map((issue: JiraIssueResponse) => {
-    const blockedBy: Issue[] = [];
-    const blocks: Issue[] = [];
+  return (data.issues as JiraIssueResponse[]).map(
+    (issue: JiraIssueResponse) => {
+      const blockedBy: Issue[] = [];
+      const blocks: Issue[] = [];
 
-    (issue.fields?.issuelinks || []).forEach((link: JiraIssueLink) => {
-      const typeName = (link.type?.name || "").toLowerCase();
-      const inwardDesc = (link.type?.inward || "").toLowerCase();
-      const outwardDesc = (link.type?.outward || "").toLowerCase();
+      (issue.fields?.issuelinks || []).forEach((link: JiraIssueLink) => {
+        const typeName = (link.type?.name || "").toLowerCase();
+        const inwardDesc = (link.type?.inward || "").toLowerCase();
+        const outwardDesc = (link.type?.outward || "").toLowerCase();
 
-      // Check for blockedBy (current issue is blocked by inwardIssue)
-      if (link.inwardIssue) {
-        if (
-          typeName === "blocks" ||
-          inwardDesc.includes("blocked by") ||
-          inwardDesc.includes("is blocked by")
-        ) {
-          const inward = link.inwardIssue;
-          blockedBy.push({
-            id: inward.id,
-            key: inward.key,
-            summary: inward.fields?.summary || "No Summary",
-            status: inward.fields?.status?.name || "Unknown",
-            url: `https://${config.jiraDomain}/browse/${inward.key}`,
-          });
+        // Check for blockedBy (current issue is blocked by inwardIssue)
+        if (link.inwardIssue) {
+          if (
+            typeName === "blocks" ||
+            inwardDesc.includes("blocked by") ||
+            inwardDesc.includes("is blocked by")
+          ) {
+            const inward = link.inwardIssue;
+            blockedBy.push({
+              id: inward.id,
+              key: inward.key,
+              summary: inward.fields?.summary || "No Summary",
+              status: inward.fields?.status?.name || "Unknown",
+              url: `https://${config.jiraDomain}/browse/${inward.key}`,
+            });
+          }
         }
+
+        // Check for blocks (current issue blocks outwardIssue)
+        if (link.outwardIssue) {
+          if (
+            typeName === "blocks" ||
+            outwardDesc.includes("blocks") ||
+            outwardDesc.includes("block")
+          ) {
+            const outward = link.outwardIssue;
+            blocks.push({
+              id: outward.id,
+              key: outward.key,
+              summary: outward.fields?.summary || "No Summary",
+              status: outward.fields?.status?.name || "Unknown",
+              url: `https://${config.jiraDomain}/browse/${outward.key}`,
+            });
+          }
+        }
+      });
+
+      const customFields: Record<string, unknown> = {};
+      if (issue.fields) {
+        Object.entries(issue.fields).forEach(([k, v]) => {
+          customFields[k] = v;
+        });
       }
 
-      // Check for blocks (current issue blocks outwardIssue)
-      if (link.outwardIssue) {
-        if (
-          typeName === "blocks" ||
-          outwardDesc.includes("blocks") ||
-          outwardDesc.includes("block")
-        ) {
-          const outward = link.outwardIssue;
-          blocks.push({
-            id: outward.id,
-            key: outward.key,
-            summary: outward.fields?.summary || "No Summary",
-            status: outward.fields?.status?.name || "Unknown",
-            url: `https://${config.jiraDomain}/browse/${outward.key}`,
-          });
-        }
-      }
-    });
+      return {
+        id: issue.id,
+        key: issue.key,
+        summary: issue.fields?.summary || "No Summary",
+        status: issue.fields?.status?.name || "Unknown",
+        assignee: issue.fields?.assignee?.displayName,
+        reporter: issue.fields?.reporter?.displayName,
+        url: `https://${config.jiraDomain}/browse/${issue.key}`,
+        blockingIssues: blockedBy.length > 0 ? blockedBy : undefined,
+        blockedBy: blockedBy.length > 0 ? blockedBy : undefined,
+        blocks: blocks.length > 0 ? blocks : undefined,
+        description: issue.fields?.description,
+        priority: issue.fields?.priority?.name,
+        created: issue.fields?.created,
+        updated: issue.fields?.updated,
+        customFields,
+      };
+    },
+  );
+};
 
-    return {
-      id: issue.id,
-      key: issue.key,
-      summary: issue.fields?.summary || "No Summary",
-      status: issue.fields?.status?.name || "Unknown",
-      assignee: issue.fields?.assignee?.displayName,
-      reporter: issue.fields?.reporter?.displayName,
-      url: `https://${config.jiraDomain}/browse/${issue.key}`,
-      blockingIssues: blockedBy.length > 0 ? blockedBy : undefined,
-      blockedBy: blockedBy.length > 0 ? blockedBy : undefined,
-      blocks: blocks.length > 0 ? blocks : undefined,
-      description: issue.fields?.description,
-      priority: issue.fields?.priority?.name,
-      created: issue.fields?.created,
-      updated: issue.fields?.updated,
-    };
+export const getJiraFields = async (
+  config: IssueTrackerConfig,
+): Promise<JiraField[]> => {
+  const useProxy = config.useProxy !== false;
+  const baseUri = useProxy ? "/api/jira" : `https://${config.jiraDomain}`;
+  const url = `${baseUri}/rest/api/3/field`;
+
+  const headers = getAuthHeaders(config) as Record<string, string>;
+  if (useProxy && config.jiraDomain) {
+    headers["x-jira-domain"] = config.jiraDomain;
+  }
+
+  const response = await fetch(url, {
+    method: "GET",
+    headers,
   });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `Jira API Error: ${response.status} ${response.statusText} - ${errorText}`,
+    );
+  }
+
+  return await response.json();
 };
 
 export const updateIssueFields = async (
