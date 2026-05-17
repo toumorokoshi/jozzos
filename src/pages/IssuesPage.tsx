@@ -134,7 +134,7 @@ export const IssuesPage: React.FC = () => {
             ].includes(f.id),
         );
         const sortedFields = [...customOrNav].sort((a, b) =>
-          a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
+          a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
         );
         setAvailableCustomFields(sortedFields);
       } catch (e) {
@@ -508,6 +508,56 @@ export const IssuesPage: React.FC = () => {
         filterId,
         extraFields,
       );
+
+      // Extract unique blocker issue keys
+      const blockerKeys = new Set<string>();
+      results.forEach((issue) => {
+        issue.blockingIssues?.forEach((blocker) => {
+          if (blocker.key) {
+            blockerKeys.add(blocker.key);
+          }
+        });
+      });
+
+      if (blockerKeys.size > 0) {
+        try {
+          const jql = `key in (${Array.from(blockerKeys)
+            .map((k) => `"${k}"`)
+            .join(",")})`;
+          const blockerDetails = await getIssuesByFilter(
+            {
+              apiToken: apiKey,
+              userEmail: userEmail,
+              jiraDomain: jiraDomain,
+              useProxy: true,
+            },
+            jql,
+            extraFields,
+          );
+
+          const blockerLookup = new Map<string, Issue>();
+          blockerDetails.forEach((detail) => {
+            blockerLookup.set(detail.key, detail);
+          });
+
+          results.forEach((issue) => {
+            if (issue.blockingIssues) {
+              issue.blockingIssues = issue.blockingIssues.map((blocker) => {
+                const detailed = blockerLookup.get(blocker.key);
+                if (detailed) {
+                  return {
+                    ...blocker,
+                    ...detailed,
+                  };
+                }
+                return blocker;
+              });
+            }
+          });
+        } catch (e) {
+          console.error("Failed to enrich blocker issues details", e);
+        }
+      }
 
       setIssues(results);
       addToHistory(filterId);
@@ -1706,16 +1756,32 @@ export const IssuesPage: React.FC = () => {
                                 </td>
                               );
                             }
-                            // Rest of the columns render empty dash
+                            // Render other fields or custom fields from the blocker issue!
+                            const val = blocker.customFields
+                              ? blocker.customFields[col.id]
+                              : (blocker as unknown as Record<string, unknown>)[
+                                  col.id
+                                ];
                             return (
                               <td
                                 key={col.id}
                                 style={{
                                   padding: "0.5rem 1rem",
-                                  color: "rgba(255,255,255,0.15)",
+                                  color: "var(--text-secondary)",
+                                  fontSize: "0.8rem",
                                 }}
                               >
-                                -
+                                <div
+                                  style={{
+                                    whiteSpace: "nowrap",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    maxWidth: "200px",
+                                  }}
+                                  title={formatFieldValue(val)}
+                                >
+                                  {formatFieldValue(val)}
+                                </div>
                               </td>
                             );
                           })}
