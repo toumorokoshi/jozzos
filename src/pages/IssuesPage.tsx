@@ -501,11 +501,14 @@ export const IssuesPage: React.FC = () => {
         useProxy: true,
       };
 
-      await addBlocker(
-        clientConfig,
-        addingBlockerFor.key,
-        blockerKeyInput.trim(),
-      );
+      let cleanBlockerKey = blockerKeyInput.trim();
+      const browseMatch = cleanBlockerKey.match(/\/browse\/([A-Za-z0-9-]+)/i);
+      if (browseMatch && browseMatch[1]) {
+        cleanBlockerKey = browseMatch[1];
+      }
+      cleanBlockerKey = cleanBlockerKey.toUpperCase();
+
+      await addBlocker(clientConfig, addingBlockerFor.key, cleanBlockerKey);
 
       // Successfully linked. Now refresh issues list.
       await handleSearch();
