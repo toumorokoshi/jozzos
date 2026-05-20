@@ -8,7 +8,9 @@ import {
   searchJiraUsers,
   getJiraFields,
   type JiraField,
+  addBlocker,
 } from "../services/JiraClient";
+
 import type { Issue } from "../models/Issue";
 import { useConfig } from "../context/ConfigContext";
 
@@ -57,6 +59,12 @@ export const IssuesPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [expandedIssues, setExpandedIssues] = useState<Set<string>>(new Set());
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
+  const [addingBlockerFor, setAddingBlockerFor] = useState<Issue | null>(null);
+  const [blockerKeyInput, setBlockerKeyInput] = useState("");
+  const [addingBlockerLoading, setAddingBlockerLoading] = useState(false);
+  const [addingBlockerError, setAddingBlockerError] = useState<string | null>(
+    null,
+  );
 
   const [activeColumns, setActiveColumns] = useState<ColumnConfig[]>(() => {
     const saved = localStorage.getItem("jozzos_active_columns");
@@ -478,19 +486,58 @@ export const IssuesPage: React.FC = () => {
     }
   };
 
+  const handleAddBlockerSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!addingBlockerFor || !blockerKeyInput.trim()) return;
+
+    setAddingBlockerLoading(true);
+    setAddingBlockerError(null);
+
+    try {
+      const clientConfig = {
+        apiToken: apiKey,
+        userEmail: userEmail,
+        jiraDomain: jiraDomain,
+        useProxy: true,
+      };
+
+      await addBlocker(
+        clientConfig,
+        addingBlockerFor.key,
+        blockerKeyInput.trim(),
+      );
+
+      // Successfully linked. Now refresh issues list.
+      await handleSearch();
+
+      // Reset state and close modal
+      setAddingBlockerFor(null);
+      setBlockerKeyInput("");
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setAddingBlockerError(err.message);
+      } else {
+        setAddingBlockerError("Failed to add blocker issue.");
+      }
+    } finally {
+      setAddingBlockerLoading(false);
+    }
+  };
+
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setSelectedIssue(null);
+        setAddingBlockerFor(null);
       }
     };
-    if (selectedIssue) {
+    if (selectedIssue || addingBlockerFor) {
       window.addEventListener("keydown", handleKeyDown);
     }
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [selectedIssue]);
+  }, [selectedIssue, addingBlockerFor]);
 
   const toggleExpand = (issueId: string) => {
     setExpandedIssues((prev) => {
@@ -846,16 +893,16 @@ export const IssuesPage: React.FC = () => {
                   </th>
                 ))}
 
-                {/* 3. Suffix Details Column Header */}
+                {/* 3. Suffix Actions Column Header */}
                 <th
                   style={{
                     padding: "0.5rem 1rem",
                     borderBottom: "1px solid var(--border-color)",
-                    width: "80px",
+                    width: "100px",
                     textAlign: "center",
                   }}
                 >
-                  Details
+                  Actions
                 </th>
               </tr>
             </thead>
@@ -1641,59 +1688,122 @@ export const IssuesPage: React.FC = () => {
                         );
                       })}
 
-                      {/* 3. Suffix Details Cell */}
+                      {/* 3. Suffix Actions Cell */}
                       <td
                         style={{
                           padding: "0.5rem 1rem",
                           textAlign: "center",
                         }}
                       >
-                        <button
-                          onClick={() => setSelectedIssue(issue)}
-                          aria-label="View issue details"
-                          title="View details"
+                        <div
                           style={{
-                            background: "rgba(255, 255, 255, 0.05)",
-                            border: "1px solid rgba(255, 255, 255, 0.1)",
-                            color: "var(--accent-secondary)",
-                            cursor: "pointer",
-                            padding: "6px",
-                            display: "inline-flex",
-                            alignItems: "center",
+                            display: "flex",
+                            gap: "0.5rem",
                             justifyContent: "center",
-                            borderRadius: "6px",
-                            transition: "all 0.2s ease",
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background =
-                              "rgba(102, 252, 241, 0.15)";
-                            e.currentTarget.style.borderColor =
-                              "var(--accent-secondary)";
-                            e.currentTarget.style.boxShadow =
-                              "0 0 10px rgba(102, 252, 241, 0.3)";
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background =
-                              "rgba(255, 255, 255, 0.05)";
-                            e.currentTarget.style.borderColor =
-                              "rgba(255, 255, 255, 0.1)";
-                            e.currentTarget.style.boxShadow = "none";
+                            alignItems: "center",
                           }}
                         >
-                          <svg
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
+                          <button
+                            onClick={() => setSelectedIssue(issue)}
+                            aria-label="View issue details"
+                            title="View details"
+                            style={{
+                              background: "rgba(255, 255, 255, 0.05)",
+                              border: "1px solid rgba(255, 255, 255, 0.1)",
+                              color: "var(--accent-secondary)",
+                              cursor: "pointer",
+                              padding: "6px",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              borderRadius: "6px",
+                              transition: "all 0.2s ease",
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background =
+                                "rgba(102, 252, 241, 0.15)";
+                              e.currentTarget.style.borderColor =
+                                "var(--accent-secondary)";
+                              e.currentTarget.style.boxShadow =
+                                "0 0 10px rgba(102, 252, 241, 0.3)";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background =
+                                "rgba(255, 255, 255, 0.05)";
+                              e.currentTarget.style.borderColor =
+                                "rgba(255, 255, 255, 0.1)";
+                              e.currentTarget.style.boxShadow = "none";
+                            }}
                           >
-                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                            <circle cx="12" cy="12" r="3"></circle>
-                          </svg>
-                        </button>
+                            <svg
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                              <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => setAddingBlockerFor(issue)}
+                            aria-label="Add blocker issue"
+                            title="Add blocker"
+                            style={{
+                              background: "rgba(255, 255, 255, 0.05)",
+                              border: "1px solid rgba(255, 255, 255, 0.1)",
+                              color: "#ff6b6b",
+                              cursor: "pointer",
+                              padding: "6px",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              borderRadius: "6px",
+                              transition: "all 0.2s ease",
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background =
+                                "rgba(255, 107, 107, 0.15)";
+                              e.currentTarget.style.borderColor = "#ff6b6b";
+                              e.currentTarget.style.boxShadow =
+                                "0 0 10px rgba(255, 107, 107, 0.3)";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background =
+                                "rgba(255, 255, 255, 0.05)";
+                              e.currentTarget.style.borderColor =
+                                "rgba(255, 255, 255, 0.1)";
+                              e.currentTarget.style.boxShadow = "none";
+                            }}
+                          >
+                            <svg
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <rect
+                                x="3"
+                                y="11"
+                                width="18"
+                                height="11"
+                                rx="2"
+                                ry="2"
+                              ></rect>
+                              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                              <line x1="12" y1="15" x2="12" y2="19"></line>
+                              <line x1="10" y1="17" x2="14" y2="17"></line>
+                            </svg>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                     {expandedIssues.has(issue.id) &&
@@ -3170,6 +3280,296 @@ export const IssuesPage: React.FC = () => {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Blocker Modal */}
+      {addingBlockerFor && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            backgroundColor: "rgba(11, 12, 16, 0.7)",
+            backdropFilter: "blur(10px)",
+            WebkitBackdropFilter: "blur(10px)",
+            zIndex: 1200,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "2rem",
+            boxSizing: "border-box",
+            animation: "modalFadeIn 0.3s ease-out forwards",
+          }}
+          onClick={() => {
+            if (!addingBlockerLoading) {
+              setAddingBlockerFor(null);
+              setBlockerKeyInput("");
+              setAddingBlockerError(null);
+            }
+          }}
+        >
+          <div
+            style={{
+              background: "rgba(31, 40, 51, 0.95)",
+              border: "1px solid rgba(255, 107, 107, 0.3)",
+              borderRadius: "16px",
+              boxShadow:
+                "0 20px 50px rgba(0, 0, 0, 0.6), inset 0 0 1px 1px rgba(255, 255, 255, 0.1)",
+              width: "100%",
+              maxWidth: "500px",
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+              animation:
+                "modalScaleUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                padding: "1.25rem 1.5rem",
+                borderBottom: "1px solid var(--border-color)",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                background: "rgba(255, 107, 107, 0.03)",
+              }}
+            >
+              <h3
+                style={{
+                  margin: 0,
+                  fontSize: "1.1rem",
+                  fontWeight: "600",
+                  color: "#ff8787",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                }}
+              >
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <rect
+                    x="3"
+                    y="11"
+                    width="18"
+                    height="11"
+                    rx="2"
+                    ry="2"
+                  ></rect>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                  <line x1="12" y1="15" x2="12" y2="19"></line>
+                  <line x1="10" y1="17" x2="14" y2="17"></line>
+                </svg>
+                Add Blocker to {addingBlockerFor.key}
+              </h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setAddingBlockerFor(null);
+                  setBlockerKeyInput("");
+                  setAddingBlockerError(null);
+                }}
+                disabled={addingBlockerLoading}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "var(--text-secondary)",
+                  cursor: "pointer",
+                  fontSize: "1.2rem",
+                  padding: "4px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transition: "color var(--transition-fast)",
+                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.color = "var(--text-primary)")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.color = "var(--text-secondary)")
+                }
+              >
+                &times;
+              </button>
+            </div>
+
+            {/* Modal Body Form */}
+            <form
+              onSubmit={handleAddBlockerSubmit}
+              style={{ padding: "1.5rem" }}
+            >
+              <div style={{ marginBottom: "1.25rem" }}>
+                <label
+                  htmlFor="blocker-key-input"
+                  style={{
+                    display: "block",
+                    fontSize: "0.8rem",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                    color: "var(--text-secondary)",
+                    marginBottom: "0.5rem",
+                  }}
+                >
+                  Blocker Issue Key or ID
+                </label>
+                <input
+                  id="blocker-key-input"
+                  type="text"
+                  placeholder="e.g. PROJ-123"
+                  className="input-field"
+                  style={{
+                    width: "100%",
+                    boxSizing: "border-box",
+                    padding: "0.6rem 0.75rem",
+                    fontSize: "0.95rem",
+                    background: "rgba(0, 0, 0, 0.4)",
+                    border: "1px solid var(--border-color)",
+                    borderRadius: "6px",
+                    color: "var(--text-primary)",
+                    outline: "none",
+                    transition: "border-color var(--transition-fast)",
+                  }}
+                  onFocus={(e) =>
+                    (e.currentTarget.style.borderColor = "#ff6b6b")
+                  }
+                  onBlur={(e) =>
+                    (e.currentTarget.style.borderColor = "var(--border-color)")
+                  }
+                  value={blockerKeyInput}
+                  onChange={(e) => setBlockerKeyInput(e.target.value)}
+                  autoFocus
+                  disabled={addingBlockerLoading}
+                  required
+                />
+              </div>
+
+              {addingBlockerError && (
+                <div
+                  style={{
+                    padding: "0.75rem 1rem",
+                    background: "rgba(255, 99, 71, 0.15)",
+                    color: "#ff8787",
+                    border: "1px solid rgba(255, 99, 71, 0.3)",
+                    borderRadius: "6px",
+                    fontSize: "0.85rem",
+                    marginBottom: "1.25rem",
+                  }}
+                >
+                  <strong>Error:</strong> {addingBlockerError}
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: "0.75rem",
+                  marginTop: "1.5rem",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAddingBlockerFor(null);
+                    setBlockerKeyInput("");
+                    setAddingBlockerError(null);
+                  }}
+                  disabled={addingBlockerLoading}
+                  style={{
+                    background: "rgba(255, 255, 255, 0.05)",
+                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                    borderRadius: "6px",
+                    padding: "0.5rem 1rem",
+                    fontSize: "0.85rem",
+                    fontWeight: "600",
+                    color: "var(--text-secondary)",
+                    cursor: "pointer",
+                    transition: "all var(--transition-fast)",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!addingBlockerLoading) {
+                      e.currentTarget.style.background =
+                        "rgba(255, 255, 255, 0.1)";
+                      e.currentTarget.style.color = "var(--text-primary)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background =
+                      "rgba(255, 255, 255, 0.05)";
+                    e.currentTarget.style.color = "var(--text-secondary)";
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={addingBlockerLoading || !blockerKeyInput.trim()}
+                  style={{
+                    background: "rgba(255, 107, 107, 0.2)",
+                    border: "1px solid rgba(255, 107, 107, 0.4)",
+                    borderRadius: "6px",
+                    padding: "0.5rem 1.25rem",
+                    fontSize: "0.85rem",
+                    fontWeight: "600",
+                    color: "#ff8787",
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    transition: "all var(--transition-fast)",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!addingBlockerLoading && blockerKeyInput.trim()) {
+                      e.currentTarget.style.background =
+                        "rgba(255, 107, 107, 0.3)";
+                      e.currentTarget.style.borderColor = "#ff6b6b";
+                      e.currentTarget.style.boxShadow =
+                        "0 0 10px rgba(255, 107, 107, 0.2)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background =
+                      "rgba(255, 107, 107, 0.2)";
+                    e.currentTarget.style.borderColor =
+                      "rgba(255, 107, 107, 0.4)";
+                    e.currentTarget.style.boxShadow = "none";
+                  }}
+                >
+                  {addingBlockerLoading ? (
+                    <>
+                      <div
+                        className="spinner"
+                        style={{
+                          width: "12px",
+                          height: "12px",
+                          border: "1px solid rgba(255, 107, 107, 0.3)",
+                          borderTop: "1px solid #ff8787",
+                          borderRadius: "50%",
+                          animation: "spin 1s linear infinite",
+                        }}
+                      />
+                      Adding...
+                    </>
+                  ) : (
+                    "Add Blocker"
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

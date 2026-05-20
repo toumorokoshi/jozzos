@@ -7,6 +7,7 @@ import {
   assignIssue,
   searchJiraUsers,
   getJiraFields,
+  addBlocker,
 } from "./JiraClient";
 
 describe("JiraClient", () => {
@@ -362,6 +363,41 @@ describe("JiraClient", () => {
         expect.any(Object),
       );
       expect(issues[0].customFields?.customfield_10010).toEqual(["Sprint 1"]);
+    });
+  });
+
+  describe("addBlocker", () => {
+    it("should send POST request to issueLink endpoint with correct payload", async () => {
+      const mockResponse = { ok: true };
+      vi.mocked(fetch).mockResolvedValue(mockResponse as unknown as Response);
+
+      await addBlocker(mockConfig, "TEST-1", "BLOCK-2");
+
+      expect(fetch).toHaveBeenCalledWith(
+        "https://test-domain.atlassian.net/rest/api/3/issueLink",
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({
+            type: { name: "Blocks" },
+            inwardIssue: { key: "TEST-1" },
+            outwardIssue: { key: "BLOCK-2" },
+          }),
+        }),
+      );
+    });
+
+    it("should throw error if fetch response is not ok", async () => {
+      const mockResponse = {
+        ok: false,
+        status: 400,
+        statusText: "Bad Request",
+        text: async () => "Issue keys are invalid",
+      };
+      vi.mocked(fetch).mockResolvedValue(mockResponse as unknown as Response);
+
+      await expect(addBlocker(mockConfig, "TEST-1", "BLOCK-2")).rejects.toThrow(
+        "Jira API Error: 400 Bad Request - Issue keys are invalid",
+      );
     });
   });
 });

@@ -369,3 +369,41 @@ export const searchJiraUsers = async (
 
   return await response.json();
 };
+
+export const addBlocker = async (
+  config: IssueTrackerConfig,
+  targetIssueKeyOrId: string,
+  blockerIssueKeyOrId: string,
+): Promise<void> => {
+  const useProxy = config.useProxy !== false;
+  const baseUri = useProxy ? "/api/jira" : `https://${config.jiraDomain}`;
+  const url = `${baseUri}/rest/api/3/issueLink`;
+
+  const headers = getAuthHeaders(config) as Record<string, string>;
+  if (useProxy && config.jiraDomain) {
+    headers["x-jira-domain"] = config.jiraDomain;
+  }
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      type: {
+        name: "Blocks",
+      },
+      inwardIssue: {
+        key: targetIssueKeyOrId,
+      },
+      outwardIssue: {
+        key: blockerIssueKeyOrId,
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `Jira API Error: ${response.status} ${response.statusText} - ${errorText}`,
+    );
+  }
+};
