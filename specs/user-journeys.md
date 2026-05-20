@@ -20,4 +20,3 @@ Given an issue X, the list view should include an arrow which can be expanded to
 ### Adding blocker issues
 
 Users can add blocker issues directly from the list view. In the "Actions" column of each issue row, a blocker icon button is available. Clicking this button opens a modal prompt where the user inputs the key or ID of the issue they want to set as a blocker. Upon submission, the app links the issues using a "Blocks" relationship in Jira and refreshes the list view to display the newly added dependency.
-

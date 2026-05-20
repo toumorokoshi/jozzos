@@ -392,10 +392,10 @@ export const addBlocker = async (
         name: "Blocks",
       },
       inwardIssue: {
-        key: targetIssueKeyOrId,
+        key: blockerIssueKeyOrId,
       },
       outwardIssue: {
-        key: blockerIssueKeyOrId,
+        key: targetIssueKeyOrId,
       },
     }),
   });

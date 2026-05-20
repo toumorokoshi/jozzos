@@ -379,8 +379,8 @@ describe("JiraClient", () => {
           method: "POST",
           body: JSON.stringify({
             type: { name: "Blocks" },
-            inwardIssue: { key: "TEST-1" },
-            outwardIssue: { key: "BLOCK-2" },
+            inwardIssue: { key: "BLOCK-2" },
+            outwardIssue: { key: "TEST-1" },
           }),
         }),
       );
