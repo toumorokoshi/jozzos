@@ -150,3 +150,43 @@ h6 {
 .animate-fade-in {
   animation: fadeIn 0.4s ease-out forwards;
 }
+
+/* Sortable Table Headers */
+.sortable-header {
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.sortable-header:hover {
+  background-color: rgba(102, 252, 241, 0.06);
+  color: var(--accent-secondary);
+}
+
+.sortable-header-content {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sort-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition:
+    opacity var(--transition-fast),
+    transform var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.sortable-header:hover .sort-icon {
+  opacity: 0.5;
+}
+
+.sort-icon.active {
+  opacity: 1 !important;
+  color: var(--accent-secondary);
+}

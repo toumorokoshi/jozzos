@@ -13,6 +13,7 @@ import {
 
 import type { Issue } from "../models/Issue";
 import { useConfig } from "../context/ConfigContext";
+import { sortIssues } from "../utils/sorting";
 
 const MAX_HISTORY_LENGTH = 1000;
 
@@ -55,6 +56,28 @@ export const IssuesPage: React.FC = () => {
   const { apiKey, userEmail, jiraDomain } = useConfig();
   const [filterId, setFilterId] = useState("");
   const [issues, setIssues] = useState<Issue[]>([]);
+  const [sortConfig, setSortConfig] = useState<{
+    key: string;
+    direction: "asc" | "desc";
+  } | null>(null);
+
+  const sortedIssues = React.useMemo(() => {
+    if (!sortConfig) return issues;
+    return sortIssues(issues, sortConfig.key, sortConfig.direction);
+  }, [issues, sortConfig]);
+
+  const handleSort = (colId: string) => {
+    setSortConfig((prev) => {
+      if (!prev || prev.key !== colId) {
+        return { key: colId, direction: "asc" };
+      }
+      if (prev.direction === "asc") {
+        return { key: colId, direction: "desc" };
+      }
+      return null;
+    });
+  };
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedIssues, setExpandedIssues] = useState<Set<string>>(new Set());
@@ -876,25 +899,55 @@ export const IssuesPage: React.FC = () => {
                 ></th>
 
                 {/* 2. Dynamic Configurable Columns Header */}
-                {activeColumns.map((col) => (
-                  <th
-                    key={col.id}
-                    style={{
-                      padding: "0.5rem 1rem",
-                      borderBottom: "1px solid var(--border-color)",
-                      width:
-                        col.id === "key"
-                          ? "120px"
-                          : col.id === "status" ||
-                              col.id === "assignee" ||
-                              col.id === "reporter"
-                            ? "150px"
-                            : undefined,
-                    }}
-                  >
-                    {col.name}
-                  </th>
-                ))}
+                {activeColumns.map((col) => {
+                  const isSorted = sortConfig?.key === col.id;
+                  const isDesc = sortConfig?.direction === "desc";
+                  return (
+                    <th
+                      key={col.id}
+                      onClick={() => handleSort(col.id)}
+                      className="sortable-header"
+                      style={{
+                        padding: "0.5rem 1rem",
+                        borderBottom: "1px solid var(--border-color)",
+                        width:
+                          col.id === "key"
+                            ? "120px"
+                            : col.id === "status" ||
+                                col.id === "assignee" ||
+                                col.id === "reporter"
+                              ? "150px"
+                              : undefined,
+                      }}
+                    >
+                      <div className="sortable-header-content">
+                        <span>{col.name}</span>
+                        <span
+                          className={`sort-icon ${isSorted ? "active" : ""}`}
+                          style={{
+                            transform: isDesc
+                              ? "rotate(180deg)"
+                              : "rotate(0deg)",
+                          }}
+                        >
+                          <svg
+                            width="12"
+                            height="12"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="3.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <polyline points="19 12 12 19 5 12"></polyline>
+                          </svg>
+                        </span>
+                      </div>
+                    </th>
+                  );
+                })}
 
                 {/* 3. Suffix Actions Column Header */}
                 <th
@@ -910,7 +963,7 @@ export const IssuesPage: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {issues.length === 0 && !loading && (
+              {sortedIssues.length === 0 && !loading && (
                 <tr>
                   <td
                     colSpan={activeColumns.length + 2}
@@ -946,7 +999,7 @@ export const IssuesPage: React.FC = () => {
                 </tr>
               )}
               {!loading &&
-                issues.map((issue) => (
+                sortedIssues.map((issue) => (
                   <React.Fragment key={issue.id}>
                     <tr
                       style={{
