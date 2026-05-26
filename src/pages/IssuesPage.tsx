@@ -65,10 +65,38 @@ export const IssuesPage: React.FC = () => {
     setFilterId(queryParam);
   }
   const [issues, setIssues] = useState<Issue[]>([]);
+  const sortByParam = searchParams.get("sortBy") || "";
+  const sortDirParam = searchParams.get("sortDir") || "";
+
+  const initialSortConfig = sortByParam
+    ? {
+        key: sortByParam,
+        direction: (sortDirParam === "desc" ? "desc" : "asc") as "asc" | "desc",
+      }
+    : null;
+
   const [sortConfig, setSortConfig] = useState<{
     key: string;
     direction: "asc" | "desc";
-  } | null>(null);
+  } | null>(initialSortConfig);
+
+  const [prevSortByParam, setPrevSortByParam] = useState(sortByParam);
+  const [prevSortDirParam, setPrevSortDirParam] = useState(sortDirParam);
+
+  if (sortByParam !== prevSortByParam || sortDirParam !== prevSortDirParam) {
+    setPrevSortByParam(sortByParam);
+    setPrevSortDirParam(sortDirParam);
+    setSortConfig(
+      sortByParam
+        ? {
+            key: sortByParam,
+            direction: (sortDirParam === "desc" ? "desc" : "asc") as
+              | "asc"
+              | "desc",
+          }
+        : null,
+    );
+  }
 
   const sortedIssues = React.useMemo(() => {
     if (!sortConfig) return issues;
@@ -76,15 +104,26 @@ export const IssuesPage: React.FC = () => {
   }, [issues, sortConfig]);
 
   const handleSort = (colId: string) => {
-    setSortConfig((prev) => {
-      if (!prev || prev.key !== colId) {
-        return { key: colId, direction: "asc" };
-      }
-      if (prev.direction === "asc") {
-        return { key: colId, direction: "desc" };
-      }
-      return null;
-    });
+    let nextSortBy = "";
+    let nextSortDir = "";
+
+    if (!sortConfig || sortConfig.key !== colId) {
+      nextSortBy = colId;
+      nextSortDir = "asc";
+    } else if (sortConfig.direction === "asc") {
+      nextSortBy = colId;
+      nextSortDir = "desc";
+    }
+
+    const nextParams = new URLSearchParams(searchParams);
+    if (nextSortBy) {
+      nextParams.set("sortBy", nextSortBy);
+      nextParams.set("sortDir", nextSortDir);
+    } else {
+      nextParams.delete("sortBy");
+      nextParams.delete("sortDir");
+    }
+    setSearchParams(nextParams);
   };
 
   const [loading, setLoading] = useState(false);
@@ -725,7 +764,9 @@ export const IssuesPage: React.FC = () => {
     if (trimmed === queryParam) {
       handleSearch(trimmed);
     } else {
-      setSearchParams({ q: trimmed });
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.set("q", trimmed);
+      setSearchParams(nextParams);
     }
   };
 
@@ -843,7 +884,9 @@ export const IssuesPage: React.FC = () => {
                 if (query === queryParam) {
                   handleSearch(query);
                 } else {
-                  setSearchParams({ q: query });
+                  const nextParams = new URLSearchParams(searchParams);
+                  nextParams.set("q", query);
+                  setSearchParams(nextParams);
                 }
               }}
               className="glass-panel"
