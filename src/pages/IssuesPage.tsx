@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   getIssuesByFilter,
   updateIssueFields,
@@ -54,7 +55,15 @@ const formatFieldValue = (val: unknown): string => {
 
 export const IssuesPage: React.FC = () => {
   const { apiKey, userEmail, jiraDomain } = useConfig();
-  const [filterId, setFilterId] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const queryParam = searchParams.get("q") || "";
+  const [filterId, setFilterId] = useState(queryParam);
+  const [prevQueryParam, setPrevQueryParam] = useState(queryParam);
+
+  if (queryParam !== prevQueryParam) {
+    setPrevQueryParam(queryParam);
+    setFilterId(queryParam);
+  }
   const [issues, setIssues] = useState<Issue[]>([]);
   const [sortConfig, setSortConfig] = useState<{
     key: string;
@@ -598,8 +607,9 @@ export const IssuesPage: React.FC = () => {
     });
   };
 
-  const handleSearch = async () => {
-    if (!filterId) {
+  const handleSearch = async (searchQuery?: string) => {
+    const activeQuery = searchQuery !== undefined ? searchQuery : filterId;
+    if (!activeQuery) {
       setError("Please enter a Filter ID or JQL");
       return;
     }
@@ -639,7 +649,7 @@ export const IssuesPage: React.FC = () => {
           jiraDomain: jiraDomain,
           useProxy: true,
         },
-        filterId,
+        activeQuery,
         extraFields,
       );
 
@@ -694,7 +704,7 @@ export const IssuesPage: React.FC = () => {
       }
 
       setIssues(results);
-      addToHistory(filterId);
+      addToHistory(activeQuery);
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -705,6 +715,26 @@ export const IssuesPage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  const performSearch = () => {
+    const trimmed = filterId.trim();
+    if (!trimmed) {
+      setError("Please enter a Filter ID or JQL");
+      return;
+    }
+    if (trimmed === queryParam) {
+      handleSearch(trimmed);
+    } else {
+      setSearchParams({ q: trimmed });
+    }
+  };
+
+  React.useEffect(() => {
+    if (queryParam) {
+      handleSearch(queryParam);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queryParam]);
 
   return (
     <div
@@ -733,12 +763,12 @@ export const IssuesPage: React.FC = () => {
           placeholder="Enter Jira Filter ID or JQL (e.g. project = PROJ)"
           value={filterId}
           onChange={(e) => setFilterId(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+          onKeyDown={(e) => e.key === "Enter" && performSearch()}
         />
         <button
           className="btn-primary"
           style={{ padding: "0.5rem 1.5rem" }}
-          onClick={handleSearch}
+          onClick={performSearch}
           disabled={loading}
         >
           {loading ? "Searching..." : "Search"}
@@ -810,9 +840,11 @@ export const IssuesPage: React.FC = () => {
             <button
               key={index}
               onClick={() => {
-                setFilterId(query);
-                // Trigger search immediately if desired
-                // setTimeout(() => handleSearch(), 0);
+                if (query === queryParam) {
+                  handleSearch(query);
+                } else {
+                  setSearchParams({ q: query });
+                }
               }}
               className="glass-panel"
               style={{
