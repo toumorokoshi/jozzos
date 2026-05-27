@@ -32,6 +32,41 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
   { id: "reporter", name: "Reporter" },
 ];
 
+const resolveColumn = (
+  id: string,
+  allCols: ColumnConfig[],
+  jiraFields: JiraField[],
+): ColumnConfig => {
+  const standard = [
+    { id: "key", name: "Key" },
+    { id: "summary", name: "Summary" },
+    { id: "status", name: "Status" },
+    { id: "assignee", name: "Assignee" },
+    { id: "reporter", name: "Reporter" },
+    { id: "created", name: "Created" },
+    { id: "updated", name: "Updated" },
+  ].find((c) => c.id === id);
+  if (standard) return standard;
+
+  const saved = allCols.find((c) => c.id === id);
+  if (saved) return saved;
+
+  const jiraField = jiraFields.find((f) => f.id === id);
+  if (jiraField) {
+    return {
+      id: jiraField.id,
+      name: jiraField.name,
+      isCustom: true,
+    };
+  }
+
+  return {
+    id,
+    name: id,
+    isCustom: true,
+  };
+};
+
 const formatFieldValue = (val: unknown): string => {
   if (val === null || val === undefined) return "-";
   if (typeof val === "string") return val;
@@ -59,6 +94,8 @@ export const IssuesPage: React.FC = () => {
   const queryParam = searchParams.get("q") || "";
   const [filterId, setFilterId] = useState(queryParam);
   const [prevQueryParam, setPrevQueryParam] = useState(queryParam);
+  const colsParam = searchParams.get("cols") || "";
+  const [prevColsParam, setPrevColsParam] = useState(colsParam);
 
   if (queryParam !== prevQueryParam) {
     setPrevQueryParam(queryParam);
@@ -138,6 +175,22 @@ export const IssuesPage: React.FC = () => {
   );
 
   const [activeColumns, setActiveColumns] = useState<ColumnConfig[]>(() => {
+    if (colsParam) {
+      const ids = colsParam
+        .split(",")
+        .map((id) => id.trim())
+        .filter(Boolean);
+      const savedAll = localStorage.getItem("jozzos_all_columns");
+      let allCols: ColumnConfig[] = [];
+      if (savedAll) {
+        try {
+          allCols = JSON.parse(savedAll);
+        } catch (e) {
+          console.warn("Failed to parse all columns", e);
+        }
+      }
+      return ids.map((id) => resolveColumn(id, allCols, []));
+    }
     const saved = localStorage.getItem("jozzos_active_columns");
     if (saved) {
       try {
@@ -152,6 +205,16 @@ export const IssuesPage: React.FC = () => {
   const saveActiveColumns = (cols: ColumnConfig[]) => {
     setActiveColumns(cols);
     localStorage.setItem("jozzos_active_columns", JSON.stringify(cols));
+
+    const nextParams = new URLSearchParams(searchParams);
+    const colIds = cols.map((c) => c.id).join(",");
+    if (colIds) {
+      nextParams.set("cols", colIds);
+    } else {
+      nextParams.delete("cols");
+    }
+    setPrevColsParam(colIds);
+    setSearchParams(nextParams);
   };
 
   const [allColumns, setAllColumns] = useState<ColumnConfig[]>(() => {
@@ -188,6 +251,30 @@ export const IssuesPage: React.FC = () => {
   const [manualFieldId, setManualFieldId] = useState("");
   const [manualFieldName, setManualFieldName] = useState("");
 
+  if (colsParam !== prevColsParam) {
+    setPrevColsParam(colsParam);
+    if (colsParam) {
+      const ids = colsParam
+        .split(",")
+        .map((id) => id.trim())
+        .filter(Boolean);
+      setActiveColumns(
+        ids.map((id) => resolveColumn(id, allColumns, availableCustomFields)),
+      );
+    } else {
+      const saved = localStorage.getItem("jozzos_active_columns");
+      if (saved) {
+        try {
+          setActiveColumns(JSON.parse(saved));
+        } catch {
+          setActiveColumns(DEFAULT_COLUMNS);
+        }
+      } else {
+        setActiveColumns(DEFAULT_COLUMNS);
+      }
+    }
+  }
+
   React.useEffect(() => {
     const fetchFields = async () => {
       if (!apiKey || !jiraDomain) return;
@@ -216,6 +303,49 @@ export const IssuesPage: React.FC = () => {
           a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
         );
         setAvailableCustomFields(sortedFields);
+
+        // Resolve names in activeColumns and allColumns using the fetched fields
+        setActiveColumns((currentActive) => {
+          let changed = false;
+          const nextActive = currentActive.map((col) => {
+            if (col.name === col.id) {
+              const found = sortedFields.find((f) => f.id === col.id);
+              if (found) {
+                changed = true;
+                return {
+                  ...col,
+                  name: found.name,
+                  isCustom: found.custom || col.isCustom,
+                };
+              }
+            }
+            return col;
+          });
+          return changed ? nextActive : currentActive;
+        });
+
+        setAllColumns((currentAll) => {
+          let changed = false;
+          const nextAll = currentAll.map((col) => {
+            if (col.name === col.id) {
+              const found = sortedFields.find((f) => f.id === col.id);
+              if (found) {
+                changed = true;
+                return {
+                  ...col,
+                  name: found.name,
+                  isCustom: found.custom || col.isCustom,
+                };
+              }
+            }
+            return col;
+          });
+          if (changed) {
+            localStorage.setItem("jozzos_all_columns", JSON.stringify(nextAll));
+            return nextAll;
+          }
+          return currentAll;
+        });
       } catch (e) {
         console.error("Failed to fetch Jira fields", e);
       }
@@ -775,7 +905,7 @@ export const IssuesPage: React.FC = () => {
       handleSearch(queryParam);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [queryParam]);
+  }, [queryParam, colsParam]);
 
   return (
     <div
