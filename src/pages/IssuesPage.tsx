@@ -15,6 +15,7 @@ import {
 import type { Issue } from "../models/Issue";
 import { useConfig } from "../context/ConfigContext";
 import { sortIssues } from "../utils/sorting";
+import { matchIssue } from "../utils/filtering";
 
 const MAX_HISTORY_LENGTH = 1000;
 
@@ -135,10 +136,17 @@ export const IssuesPage: React.FC = () => {
     );
   }
 
+  const [rowFilterQuery, setRowFilterQuery] = useState("");
+
+  const filteredIssues = React.useMemo(() => {
+    if (!rowFilterQuery.trim()) return issues;
+    return issues.filter((issue) => matchIssue(issue, rowFilterQuery));
+  }, [issues, rowFilterQuery]);
+
   const sortedIssues = React.useMemo(() => {
-    if (!sortConfig) return issues;
-    return sortIssues(issues, sortConfig.key, sortConfig.direction);
-  }, [issues, sortConfig]);
+    if (!sortConfig) return filteredIssues;
+    return sortIssues(filteredIssues, sortConfig.key, sortConfig.direction);
+  }, [filteredIssues, sortConfig]);
 
   const handleSort = (colId: string) => {
     let nextSortBy = "";
@@ -984,6 +992,95 @@ export const IssuesPage: React.FC = () => {
           </svg>
           Columns
         </button>
+        <div
+          style={{
+            height: "24px",
+            width: "1px",
+            background: "var(--border-color)",
+          }}
+        />
+        <div style={{ position: "relative", width: "250px" }}>
+          <span
+            style={{
+              position: "absolute",
+              left: "10px",
+              top: "50%",
+              transform: "translateY(-50%)",
+              color: "var(--text-secondary)",
+              pointerEvents: "none",
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+          </span>
+          <input
+            type="text"
+            className="input-field"
+            style={{
+              padding: "0.5rem 2rem 0.5rem 2.2rem",
+              margin: 0,
+              width: "100%",
+              fontSize: "0.875rem",
+            }}
+            placeholder="Filter loaded rows..."
+            value={rowFilterQuery}
+            onChange={(e) => setRowFilterQuery(e.target.value)}
+          />
+          {rowFilterQuery && (
+            <button
+              onClick={() => setRowFilterQuery("")}
+              style={{
+                position: "absolute",
+                right: "10px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                background: "none",
+                border: "none",
+                color: "var(--text-secondary)",
+                cursor: "pointer",
+                padding: "2px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "color var(--transition-fast)",
+              }}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.color = "var(--accent-secondary)")
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.color = "var(--text-secondary)")
+              }
+              title="Clear filter"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Query History */}
