@@ -10,12 +10,12 @@ import {
   getJiraFields,
   type JiraField,
   addBlocker,
-} from "../services/JiraClient";
+  type Issue,
+  sortIssues,
+  matchIssue,
+} from "jozzos-backend";
 
-import type { Issue } from "../models/Issue";
 import { useConfig } from "../context/ConfigContext";
-import { sortIssues } from "../utils/sorting";
-import { matchIssue } from "../utils/filtering";
 
 const MAX_HISTORY_LENGTH = 1000;
 

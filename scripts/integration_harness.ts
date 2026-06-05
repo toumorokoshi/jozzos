@@ -1,5 +1,4 @@
-import { getIssuesByFilter } from "../src/services/JiraClient";
-import { IssueTrackerConfig } from "../src/models/Issue";
+import { getIssuesByFilter, type IssueTrackerConfig } from "jozzos-backend";
 
 async function run() {
   const apiKey = process.env.JIRA_API_KEY;

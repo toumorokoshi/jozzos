@@ -1,0 +1,76 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { createJiraProxy } from "./JiraProxy";
+import type { IncomingMessage, ServerResponse } from "node:http";
+
+describe("JiraProxy", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn());
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("should forward a GET request to the target Jira domain", async () => {
+    const mockResponse = {
+      status: 200,
+      headers: new Map([["content-type", "application/json"]]),
+      arrayBuffer: async () =>
+        new TextEncoder().encode(JSON.stringify({ ok: true })).buffer,
+      body: true,
+    };
+
+    vi.mocked(fetch).mockResolvedValue(mockResponse as unknown as Response);
+
+    const proxy = createJiraProxy({
+      defaultJiraDomain: "my-domain.atlassian.net",
+      apiPrefix: "/api/jira",
+    });
+
+    // Mock request
+    const req = {
+      url: "/api/jira/rest/api/3/search",
+      method: "GET",
+      headers: {
+        "x-jira-domain": "custom-domain.atlassian.net",
+        authorization: "Basic abc",
+      },
+      [Symbol.asyncIterator]: async function* () {},
+    } as unknown as IncomingMessage;
+
+    // Mock response
+    const writtenHeaders: Record<string, string> = {};
+    let endCalled = false;
+    let endData: Buffer | undefined;
+
+    const res = {
+      statusCode: 200,
+      setHeader: (name: string, value: string) => {
+        writtenHeaders[name] = value;
+      },
+      end: (data?: Buffer) => {
+        endCalled = true;
+        endData = data;
+      },
+    } as unknown as ServerResponse;
+
+    await proxy(req, res);
+
+    expect(fetch).toHaveBeenCalledWith(
+      "https://custom-domain.atlassian.net/rest/api/3/search",
+      expect.objectContaining({
+        method: "GET",
+        headers: expect.objectContaining({
+          host: "custom-domain.atlassian.net",
+          origin: "https://custom-domain.atlassian.net",
+          authorization: "Basic abc",
+        }),
+      }),
+    );
+
+    expect(res.statusCode).toBe(200);
+    expect(writtenHeaders["content-type"]).toBe("application/json");
+    expect(endCalled).toBe(true);
+    expect(JSON.parse(endData!.toString())).toEqual({ ok: true });
+  });
+});

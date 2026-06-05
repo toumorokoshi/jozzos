@@ -1,10 +1,14 @@
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import type { IncomingMessage } from "http";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), "");
+  const env = loadEnv(mode, path.resolve(__dirname, "../../"), "");
   const jiraHostname = env.JIRA_HOSTNAME || "your-domain.atlassian.net";
   const targetUrl = `https://${jiraHostname}`;
 
