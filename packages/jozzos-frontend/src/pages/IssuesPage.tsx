@@ -1785,7 +1785,13 @@ export const IssuesPage: React.FC = () => {
         <input
           type="text"
           className="input-field"
-          style={{ padding: "0.5rem 1rem", flex: 1, margin: 0 }}
+          style={{
+            padding: "0.5rem 1rem",
+            flex: 1,
+            margin: 0,
+            height: "38px",
+            boxSizing: "border-box",
+          }}
           placeholder="Enter Jira Filter ID or JQL (e.g. project = PROJ)"
           value={filterId}
           onChange={(e) => setFilterId(e.target.value)}
@@ -1793,7 +1799,14 @@ export const IssuesPage: React.FC = () => {
         />
         <button
           className="btn-primary"
-          style={{ padding: "0.5rem 1.5rem" }}
+          style={{
+            padding: "0.5rem 1.5rem",
+            height: "38px",
+            boxSizing: "border-box",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
           onClick={performSearch}
           disabled={loading}
         >
@@ -1812,7 +1825,8 @@ export const IssuesPage: React.FC = () => {
             borderRadius: "6px",
             color: "var(--text-primary)",
             transition: "all var(--transition-fast)",
-            height: "100%",
+            height: "38px",
+            boxSizing: "border-box",
             margin: 0,
           }}
           onClick={() => setIsConfigOpen(true)}
@@ -1859,7 +1873,8 @@ export const IssuesPage: React.FC = () => {
               ? "var(--text-primary)"
               : "rgba(255, 255, 255, 0.25)",
             transition: "all var(--transition-fast)",
-            height: "100%",
+            height: "38px",
+            boxSizing: "border-box",
             margin: 0,
             textDecoration: "none",
             pointerEvents: jiraUrl ? "auto" : "none",
