@@ -172,6 +172,69 @@ describe("JiraClient", () => {
     });
   });
 
+  it("should omit resolved blocking issues from the blocked by list", async () => {
+    const mockResponse = {
+      ok: true,
+      json: async () => ({
+        issues: [
+          {
+            id: "1001",
+            key: "TEST-1",
+            fields: {
+              summary: "Main Issue",
+              status: { name: "In Progress" },
+              issuelinks: [
+                {
+                  id: "link-1",
+                  type: { name: "Blocks" },
+                  inwardIssue: {
+                    id: "1002",
+                    key: "BLOCK-1",
+                    fields: {
+                      summary: "Blocking Issue 1",
+                      status: { name: "Open" },
+                    },
+                  },
+                },
+                {
+                  id: "link-2",
+                  type: { name: "Blocks" },
+                  inwardIssue: {
+                    id: "1003",
+                    key: "BLOCK-2",
+                    fields: {
+                      summary: "Blocking Issue 2",
+                      status: { name: "Done" },
+                    },
+                  },
+                },
+                {
+                  id: "link-3",
+                  type: { name: "Blocks" },
+                  inwardIssue: {
+                    id: "1004",
+                    key: "BLOCK-3",
+                    fields: {
+                      summary: "Blocking Issue 3",
+                      status: { name: "Resolved" },
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      }),
+    };
+
+    vi.mocked(fetch).mockResolvedValue(mockResponse as unknown as Response);
+
+    const issues = await getIssuesByFilter(mockConfig, "TEST-1");
+
+    expect(issues[0].blockingIssues).toHaveLength(1);
+    expect(issues[0].blockingIssues![0].key).toBe("BLOCK-1");
+  });
+
   it("should format JQL queries properly when they are not numbers", async () => {
     const mockResponse = {
       ok: true,

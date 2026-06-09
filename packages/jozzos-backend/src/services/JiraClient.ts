@@ -146,13 +146,24 @@ export const getIssuesByFilter = async (
             inwardDesc.includes("is blocked by")
           ) {
             const inward = link.inwardIssue;
-            blockedBy.push({
-              id: inward.id,
-              key: inward.key,
-              summary: inward.fields?.summary || "No Summary",
-              status: inward.fields?.status?.name || "Unknown",
-              url: `https://${config.jiraDomain}/browse/${inward.key}`,
-            });
+            const inwardStatus = (
+              inward.fields?.status?.name || ""
+            ).toLowerCase();
+            const isResolved =
+              inwardStatus === "done" ||
+              inwardStatus === "resolved" ||
+              inwardStatus === "closed" ||
+              inwardStatus === "complete";
+
+            if (!isResolved) {
+              blockedBy.push({
+                id: inward.id,
+                key: inward.key,
+                summary: inward.fields?.summary || "No Summary",
+                status: inward.fields?.status?.name || "Unknown",
+                url: `https://${config.jiraDomain}/browse/${inward.key}`,
+              });
+            }
           }
         }
 
