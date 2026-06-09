@@ -2250,9 +2250,16 @@ export const IssuesPage: React.FC = () => {
                                   {issue.key}
                                 </a>
                                 {issue.blockedBy &&
-                                  issue.blockedBy.length > 0 && (
+                                  issue.blockedBy.filter(
+                                    (b) => !isStatusClosed(b.status),
+                                  ).length > 0 && (
                                     <span
-                                      title={`Blocked by ${issue.blockedBy.map((b) => b.key).join(", ")}`}
+                                      title={`Blocked by ${issue.blockedBy
+                                        .filter(
+                                          (b) => !isStatusClosed(b.status),
+                                        )
+                                        .map((b) => b.key)
+                                        .join(", ")}`}
                                       style={{
                                         color: "#ff6b6b",
                                         display: "inline-flex",
@@ -2413,7 +2420,9 @@ export const IssuesPage: React.FC = () => {
                                   </div>
                                 )}
                                 {issue.blockedBy &&
-                                  issue.blockedBy.length > 0 && (
+                                  issue.blockedBy.filter(
+                                    (b) => !isStatusClosed(b.status),
+                                  ).length > 0 && (
                                     <div
                                       style={{
                                         display: "flex",
@@ -2421,67 +2430,73 @@ export const IssuesPage: React.FC = () => {
                                         flexWrap: "wrap",
                                       }}
                                     >
-                                      {issue.blockedBy.map((blocker) => (
-                                        <a
-                                          key={blocker.id}
-                                          href={blocker.url}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          onClick={(e) => e.stopPropagation()}
-                                          title={`Blocked by ${blocker.key}: ${blocker.summary}`}
-                                          style={{
-                                            display: "inline-flex",
-                                            alignItems: "center",
-                                            gap: "0.25rem",
-                                            background:
-                                              "rgba(255, 107, 107, 0.12)",
-                                            border:
-                                              "1px solid rgba(255, 107, 107, 0.25)",
-                                            color: "#ff8787",
-                                            padding: "0.1rem 0.4rem",
-                                            borderRadius: "4px",
-                                            fontSize: "0.7rem",
-                                            fontWeight: "600",
-                                            textDecoration: "none",
-                                            transition:
-                                              "all var(--transition-fast)",
-                                          }}
-                                          onMouseEnter={(e) => {
-                                            e.currentTarget.style.background =
-                                              "rgba(255, 107, 107, 0.25)";
-                                            e.currentTarget.style.borderColor =
-                                              "#ff6b6b";
-                                          }}
-                                          onMouseLeave={(e) => {
-                                            e.currentTarget.style.background =
-                                              "rgba(255, 107, 107, 0.12)";
-                                            e.currentTarget.style.borderColor =
-                                              "rgba(255, 107, 107, 0.25)";
-                                          }}
-                                        >
-                                          <svg
-                                            width="10"
-                                            height="10"
-                                            viewBox="0 0 24 24"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            strokeWidth="3"
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
+                                      {issue.blockedBy
+                                        .filter(
+                                          (b) => !isStatusClosed(b.status),
+                                        )
+                                        .map((blocker) => (
+                                          <a
+                                            key={blocker.id}
+                                            href={blocker.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            onClick={(e) => e.stopPropagation()}
+                                            title={`Blocked by ${blocker.key}: ${blocker.summary}`}
+                                            style={{
+                                              display: "inline-flex",
+                                              alignItems: "center",
+                                              gap: "0.25rem",
+                                              background:
+                                                "rgba(255, 107, 107, 0.12)",
+                                              border:
+                                                "1px solid rgba(255, 107, 107, 0.25)",
+                                              color: "#ff8787",
+                                              padding: "0.1rem 0.4rem",
+                                              borderRadius: "4px",
+                                              fontSize: "0.7rem",
+                                              fontWeight: "600",
+                                              textDecoration: "none",
+                                              transition:
+                                                "all var(--transition-fast)",
+                                            }}
+                                            onMouseEnter={(e) => {
+                                              e.currentTarget.style.background =
+                                                "rgba(255, 107, 107, 0.25)";
+                                              e.currentTarget.style.borderColor =
+                                                "#ff6b6b";
+                                            }}
+                                            onMouseLeave={(e) => {
+                                              e.currentTarget.style.background =
+                                                "rgba(255, 107, 107, 0.12)";
+                                              e.currentTarget.style.borderColor =
+                                                "rgba(255, 107, 107, 0.25)";
+                                            }}
                                           >
-                                            <rect
-                                              x="3"
-                                              y="11"
-                                              width="18"
-                                              height="11"
-                                              rx="2"
-                                              ry="2"
-                                            ></rect>
-                                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                                          </svg>
-                                          <span>Blocked by {blocker.key}</span>
-                                        </a>
-                                      ))}
+                                            <svg
+                                              width="10"
+                                              height="10"
+                                              viewBox="0 0 24 24"
+                                              fill="none"
+                                              stroke="currentColor"
+                                              strokeWidth="3"
+                                              strokeLinecap="round"
+                                              strokeLinejoin="round"
+                                            >
+                                              <rect
+                                                x="3"
+                                                y="11"
+                                                width="18"
+                                                height="11"
+                                                rx="2"
+                                                ry="2"
+                                              ></rect>
+                                              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                                            </svg>
+                                            <span>
+                                              Blocked by {blocker.key}
+                                            </span>
+                                          </a>
+                                        ))}
                                     </div>
                                   )}
                               </div>
@@ -3234,7 +3249,9 @@ export const IssuesPage: React.FC = () => {
               >
                 {/* Blocked Alert Banner */}
                 {selectedIssue.blockedBy &&
-                  selectedIssue.blockedBy.length > 0 && (
+                  selectedIssue.blockedBy.filter(
+                    (b) => !isStatusClosed(b.status),
+                  ).length > 0 && (
                     <div
                       style={{
                         display: "flex",
@@ -3270,25 +3287,27 @@ export const IssuesPage: React.FC = () => {
                       </svg>
                       <div style={{ fontSize: "0.85rem", lineHeight: "1.4" }}>
                         <strong>Blocked:</strong> This issue is blocked by{" "}
-                        {selectedIssue.blockedBy.map((blocker, idx) => (
-                          <React.Fragment key={blocker.id}>
-                            {idx > 0 && ", "}
-                            <a
-                              href={blocker.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              style={{
-                                color: "#ff6b6b",
-                                fontWeight: "600",
-                                textDecoration: "none",
-                                borderBottom:
-                                  "1px dashed rgba(255, 107, 107, 0.4)",
-                              }}
-                            >
-                              {blocker.key}
-                            </a>
-                          </React.Fragment>
-                        ))}
+                        {selectedIssue.blockedBy
+                          .filter((b) => !isStatusClosed(b.status))
+                          .map((blocker, idx) => (
+                            <React.Fragment key={blocker.id}>
+                              {idx > 0 && ", "}
+                              <a
+                                href={blocker.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  color: "#ff6b6b",
+                                  fontWeight: "600",
+                                  textDecoration: "none",
+                                  borderBottom:
+                                    "1px dashed rgba(255, 107, 107, 0.4)",
+                                }}
+                              >
+                                {blocker.key}
+                              </a>
+                            </React.Fragment>
+                          ))}
                       </div>
                     </div>
                   )}
@@ -3360,11 +3379,17 @@ export const IssuesPage: React.FC = () => {
                             ></rect>
                             <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
                           </svg>
-                          Blocked By ({selectedIssue.blockedBy?.length || 0})
+                          Blocked By (
+                          {selectedIssue.blockedBy?.filter(
+                            (b) => !isStatusClosed(b.status),
+                          ).length || 0}
+                          )
                         </h4>
 
                         {selectedIssue.blockedBy &&
-                        selectedIssue.blockedBy.length > 0 ? (
+                        selectedIssue.blockedBy.filter(
+                          (b) => !isStatusClosed(b.status),
+                        ).length > 0 ? (
                           <div
                             style={{
                               display: "flex",
@@ -3372,84 +3397,87 @@ export const IssuesPage: React.FC = () => {
                               gap: "0.5rem",
                             }}
                           >
-                            {selectedIssue.blockedBy.map((dep) => (
-                              <div
-                                key={dep.id}
-                                style={{
-                                  background: "rgba(255, 107, 107, 0.03)",
-                                  border: "1px solid rgba(255, 107, 107, 0.15)",
-                                  borderRadius: "8px",
-                                  padding: "0.75rem",
-                                  display: "flex",
-                                  justifyContent: "space-between",
-                                  alignItems: "center",
-                                  gap: "1rem",
-                                  transition:
-                                    "background 0.2s, border-color 0.2s",
-                                }}
-                                onMouseEnter={(e) => {
-                                  e.currentTarget.style.background =
-                                    "rgba(255, 107, 107, 0.08)";
-                                  e.currentTarget.style.borderColor =
-                                    "rgba(255, 107, 107, 0.3)";
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.background =
-                                    "rgba(255, 107, 107, 0.03)";
-                                  e.currentTarget.style.borderColor =
-                                    "rgba(255, 107, 107, 0.15)";
-                                }}
-                              >
+                            {selectedIssue.blockedBy
+                              .filter((b) => !isStatusClosed(b.status))
+                              .map((dep) => (
                                 <div
+                                  key={dep.id}
                                   style={{
+                                    background: "rgba(255, 107, 107, 0.03)",
+                                    border:
+                                      "1px solid rgba(255, 107, 107, 0.15)",
+                                    borderRadius: "8px",
+                                    padding: "0.75rem",
                                     display: "flex",
+                                    justifyContent: "space-between",
                                     alignItems: "center",
-                                    gap: "0.75rem",
-                                    flex: 1,
-                                    minWidth: 0,
+                                    gap: "1rem",
+                                    transition:
+                                      "background 0.2s, border-color 0.2s",
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.background =
+                                      "rgba(255, 107, 107, 0.08)";
+                                    e.currentTarget.style.borderColor =
+                                      "rgba(255, 107, 107, 0.3)";
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.background =
+                                      "rgba(255, 107, 107, 0.03)";
+                                    e.currentTarget.style.borderColor =
+                                      "rgba(255, 107, 107, 0.15)";
                                   }}
                                 >
-                                  <a
-                                    href={dep.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
+                                  <div
                                     style={{
-                                      color: "#ff6b6b",
-                                      textDecoration: "none",
-                                      fontSize: "0.85rem",
-                                      fontWeight: "600",
-                                      whiteSpace: "nowrap",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: "0.75rem",
+                                      flex: 1,
+                                      minWidth: 0,
                                     }}
                                   >
-                                    {dep.key}
-                                  </a>
+                                    <a
+                                      href={dep.url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      style={{
+                                        color: "#ff6b6b",
+                                        textDecoration: "none",
+                                        fontSize: "0.85rem",
+                                        fontWeight: "600",
+                                        whiteSpace: "nowrap",
+                                      }}
+                                    >
+                                      {dep.key}
+                                    </a>
+                                    <span
+                                      style={{
+                                        color: "var(--text-primary)",
+                                        fontSize: "0.85rem",
+                                        overflow: "hidden",
+                                        textOverflow: "ellipsis",
+                                        whiteSpace: "nowrap",
+                                      }}
+                                    >
+                                      {dep.summary}
+                                    </span>
+                                  </div>
                                   <span
                                     style={{
-                                      color: "var(--text-primary)",
-                                      fontSize: "0.85rem",
-                                      overflow: "hidden",
-                                      textOverflow: "ellipsis",
+                                      background: "rgba(255, 107, 107, 0.15)",
+                                      color: "#ff8787",
+                                      padding: "0.15rem 0.45rem",
+                                      borderRadius: "4px",
+                                      fontSize: "0.7rem",
+                                      fontWeight: "700",
                                       whiteSpace: "nowrap",
                                     }}
                                   >
-                                    {dep.summary}
+                                    {dep.status}
                                   </span>
                                 </div>
-                                <span
-                                  style={{
-                                    background: "rgba(255, 107, 107, 0.15)",
-                                    color: "#ff8787",
-                                    padding: "0.15rem 0.45rem",
-                                    borderRadius: "4px",
-                                    fontSize: "0.7rem",
-                                    fontWeight: "700",
-                                    whiteSpace: "nowrap",
-                                  }}
-                                >
-                                  {dep.status}
-                                </span>
-                              </div>
-                            ))}
+                              ))}
                           </div>
                         ) : (
                           <div
