@@ -63,7 +63,7 @@ describe("JiraProxy", () => {
         headers: expect.objectContaining({
           host: "custom-domain.atlassian.net",
           origin: "https://custom-domain.atlassian.net",
-          authorization: "Basic abc",
+          Authorization: "Basic abc",
         }),
       }),
     );
@@ -156,7 +156,7 @@ describe("JiraProxy", () => {
       "https://my-domain.atlassian.net/rest/api/3/search",
       expect.objectContaining({
         headers: expect.objectContaining({
-          authorization: "Basic abc",
+          Authorization: "Basic abc",
         }),
       }),
     );

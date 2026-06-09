@@ -42,10 +42,19 @@ export function createJiraProxy(options: JiraProxyOptions = {}) {
 
       const jiraAuth = headers["x-jira-authorization"];
       if (jiraAuth) {
-        headers["authorization"] = Array.isArray(jiraAuth)
+        delete headers["authorization"];
+        delete headers["Authorization"];
+        headers["Authorization"] = Array.isArray(jiraAuth)
           ? jiraAuth[0]
           : jiraAuth;
         delete headers["x-jira-authorization"];
+      } else {
+        const auth = headers["authorization"] || headers["Authorization"];
+        if (auth) {
+          delete headers["authorization"];
+          delete headers["Authorization"];
+          headers["Authorization"] = Array.isArray(auth) ? auth[0] : auth;
+        }
       }
 
       // Fetch the response
