@@ -1,14 +1,16 @@
 #### What is Jozzos?
 
-Jozzos is a high-productivity user interface for issue trackers (like Jira) designed specifically for superusers and program managers. It turns complex task lists into an interactive, spreadsheet-like workspace, highlighting blockers and dependencies in real-time.
+Jozzos is a supplemental UI for issue management tools such as Jira. It is designed to help with managing large projects that have dozens of issues, each of which might have a deeply nested tree of blockers from which timelines must be calculated.
+
+It incorporates a lot of the ideas from https://y.tsutsumi.io/multi-org-project-planning/.
 
 #### Why should I use it?
 
 Standard trackers often hide blocker hierarchies or make it difficult to visualize deep dependency chains. Jozzos solves this by providing:
 
-- **Infinite Blocker Recursion**: Automatically traverses and maps nested blockers to any depth.
-- **Interactive Spreadsheets**: Edit issue fields (Summary, Status, Assignee, Reporter) inline by double-clicking.
-- **Visual Dependency Tree**: Instantly see which issues block which, nested with collapsible rows.
+- Infinite Blocker Recursion: Automatically traverses and maps nested blockers to any depth.
+- Interactive Spreadsheets: Edit issue fields (Summary, Status, Assignee, Reporter) inline by double-clicking.
+- Visual Dependency Tree: Instantly see which issues block which, nested with collapsible rows.
 
 #### How do I use it?
 
