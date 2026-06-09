@@ -50,8 +50,15 @@ export function createJiraProxy(options: JiraProxyOptions = {}) {
       // Write response headers and status
       res.statusCode = response.status;
       response.headers.forEach((value, name) => {
-        // Skip transfer-encoding chunked if we're writing directly
-        if (name.toLowerCase() !== "transfer-encoding") {
+        const lowerName = name.toLowerCase();
+        // Skip transfer-encoding chunked if we're writing directly.
+        // Also skip content-encoding and content-length because Node fetch automatically
+        // decompresses the response, making the body plain uncompressed content (JSON).
+        if (
+          lowerName !== "transfer-encoding" &&
+          lowerName !== "content-encoding" &&
+          lowerName !== "content-length"
+        ) {
           res.setHeader(name, value);
         }
       });

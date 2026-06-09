@@ -73,4 +73,49 @@ describe("JiraProxy", () => {
     expect(endCalled).toBe(true);
     expect(JSON.parse(endData!.toString())).toEqual({ ok: true });
   });
+
+  it("should strip content-encoding, content-length, and transfer-encoding headers from the response", async () => {
+    const mockResponse = {
+      status: 200,
+      headers: new Map([
+        ["content-type", "application/json"],
+        ["content-encoding", "gzip"],
+        ["content-length", "100"],
+        ["transfer-encoding", "chunked"],
+      ]),
+      arrayBuffer: async () =>
+        new TextEncoder().encode(JSON.stringify({ ok: true })).buffer,
+      body: true,
+    };
+
+    vi.mocked(fetch).mockResolvedValue(mockResponse as unknown as Response);
+
+    const proxy = createJiraProxy({
+      defaultJiraDomain: "my-domain.atlassian.net",
+      apiPrefix: "/api/jira",
+    });
+
+    const req = {
+      url: "/api/jira/rest/api/3/search",
+      method: "GET",
+      headers: {},
+      [Symbol.asyncIterator]: async function* () {},
+    } as unknown as IncomingMessage;
+
+    const writtenHeaders: Record<string, string> = {};
+    const res = {
+      statusCode: 200,
+      setHeader: (name: string, value: string) => {
+        writtenHeaders[name] = value;
+      },
+      end: () => {},
+    } as unknown as ServerResponse;
+
+    await proxy(req, res);
+
+    expect(writtenHeaders["content-type"]).toBe("application/json");
+    expect(writtenHeaders["content-encoding"]).toBeUndefined();
+    expect(writtenHeaders["content-length"]).toBeUndefined();
+    expect(writtenHeaders["transfer-encoding"]).toBeUndefined();
+  });
 });
