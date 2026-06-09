@@ -116,6 +116,16 @@ export const IssuesPage: React.FC = () => {
     setPrevQueryParam(queryParam);
     setFilterId(queryParam);
   }
+
+  const getJiraSearchUrl = () => {
+    if (!jiraDomain || !filterId) return undefined;
+    const trimmed = filterId.trim();
+    if (!trimmed) return undefined;
+    const jql = /^\d+$/.test(trimmed) ? `filter=${trimmed}` : trimmed;
+    return `https://${jiraDomain}/issues/?jql=${encodeURIComponent(jql)}`;
+  };
+  const jiraUrl = getJiraSearchUrl();
+
   const [issues, setIssues] = useState<Issue[]>([]);
   const sortByParam = searchParams.get("sortBy") || "";
   const sortDirParam = searchParams.get("sortDir") || "";
@@ -1829,6 +1839,60 @@ export const IssuesPage: React.FC = () => {
           </svg>
           Columns
         </button>
+        <a
+          href={jiraUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="glass-panel"
+          style={{
+            padding: "0.5rem 1.25rem",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.5rem",
+            cursor: jiraUrl ? "pointer" : "not-allowed",
+            background: jiraUrl
+              ? "rgba(255, 255, 255, 0.05)"
+              : "rgba(255, 255, 255, 0.02)",
+            border: "1px solid rgba(255, 255, 255, 0.15)",
+            borderRadius: "6px",
+            color: jiraUrl
+              ? "var(--text-primary)"
+              : "rgba(255, 255, 255, 0.25)",
+            transition: "all var(--transition-fast)",
+            height: "100%",
+            margin: 0,
+            textDecoration: "none",
+            pointerEvents: jiraUrl ? "auto" : "none",
+          }}
+          onMouseEnter={(e) => {
+            if (jiraUrl) {
+              e.currentTarget.style.background = "rgba(102, 252, 241, 0.1)";
+              e.currentTarget.style.borderColor = "var(--accent-secondary)";
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (jiraUrl) {
+              e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
+              e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.15)";
+            }
+          }}
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+            <polyline points="15 3 21 3 21 9"></polyline>
+            <line x1="10" y1="14" x2="21" y2="3"></line>
+          </svg>
+          Open in Jira
+        </a>
         <div
           style={{
             height: "24px",
