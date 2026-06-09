@@ -89,6 +89,20 @@ const formatFieldValue = (val: unknown): string => {
   return String(val);
 };
 
+const isStatusClosed = (statusName: string | undefined): boolean => {
+  if (!statusName) return false;
+  const lower = statusName.toLowerCase();
+  return (
+    lower === "done" ||
+    lower === "resolved" ||
+    lower === "closed" ||
+    lower === "complete" ||
+    lower === "completed" ||
+    lower === "cancelled" ||
+    lower === "canceled"
+  );
+};
+
 export const IssuesPage: React.FC = () => {
   const { apiKey, userEmail, jiraDomain } = useConfig();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -957,6 +971,8 @@ export const IssuesPage: React.FC = () => {
                 style={{
                   borderBottom: "1px solid var(--border-color)",
                   background: "rgba(255, 255, 255, 0.02)",
+                  opacity: isStatusClosed(blocker.status) ? 0.45 : 1,
+                  transition: "opacity var(--transition-fast)",
                 }}
               >
                 {/* 1. Indentation Arrow/Chevron prefix */}
@@ -1067,7 +1083,11 @@ export const IssuesPage: React.FC = () => {
                             height="10"
                             viewBox="0 0 24 24"
                             fill="none"
-                            stroke="#ff6b6b"
+                            stroke={
+                              isStatusClosed(blocker.status)
+                                ? "var(--text-secondary)"
+                                : "#ff6b6b"
+                            }
                             strokeWidth="2.5"
                             strokeLinecap="round"
                             strokeLinejoin="round"
@@ -1088,8 +1108,12 @@ export const IssuesPage: React.FC = () => {
                             target="_blank"
                             rel="noopener noreferrer"
                             style={{
-                              color: "#ff6b6b",
-                              textDecoration: "none",
+                              color: isStatusClosed(blocker.status)
+                                ? "var(--text-secondary)"
+                                : "#ff6b6b",
+                              textDecoration: isStatusClosed(blocker.status)
+                                ? "line-through"
+                                : "none",
                               fontSize: "0.8rem",
                               fontWeight: "600",
                             }}
@@ -1311,8 +1335,12 @@ export const IssuesPage: React.FC = () => {
                             <span
                               title="Double-click to change status"
                               style={{
-                                background: "rgba(255, 107, 107, 0.15)",
-                                color: "#ff8787",
+                                background: isStatusClosed(blocker.status)
+                                  ? "rgba(255, 255, 255, 0.1)"
+                                  : "rgba(255, 107, 107, 0.15)",
+                                color: isStatusClosed(blocker.status)
+                                  ? "var(--text-secondary)"
+                                  : "#ff8787",
                                 padding: "0.05rem 0.4rem",
                                 borderRadius: "4px",
                                 fontSize: "0.7rem",
@@ -2116,7 +2144,9 @@ export const IssuesPage: React.FC = () => {
                       style={{
                         borderBottom: "1px solid var(--border-color)",
                         background: "rgba(11, 12, 16, 0.4)",
-                        transition: "background var(--transition-fast)",
+                        opacity: isStatusClosed(issue.status) ? 0.45 : 1,
+                        transition:
+                          "background var(--transition-fast), opacity var(--transition-fast)",
                       }}
                       onMouseEnter={(e) =>
                         (e.currentTarget.style.background =
@@ -2208,8 +2238,12 @@ export const IssuesPage: React.FC = () => {
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   style={{
-                                    color: "var(--accent-secondary)",
-                                    textDecoration: "none",
+                                    color: isStatusClosed(issue.status)
+                                      ? "var(--text-secondary)"
+                                      : "var(--accent-secondary)",
+                                    textDecoration: isStatusClosed(issue.status)
+                                      ? "line-through"
+                                      : "none",
                                     fontWeight: "500",
                                   }}
                                 >
@@ -2561,8 +2595,12 @@ export const IssuesPage: React.FC = () => {
                                   <span
                                     title="Double-click to change status"
                                     style={{
-                                      background: "var(--accent-primary)",
-                                      color: "var(--bg-primary)",
+                                      background: isStatusClosed(issue.status)
+                                        ? "rgba(255, 255, 255, 0.1)"
+                                        : "var(--accent-primary)",
+                                      color: isStatusClosed(issue.status)
+                                        ? "var(--text-secondary)"
+                                        : "var(--bg-primary)",
                                       padding: "0.1rem 0.5rem",
                                       borderRadius: "4px",
                                       fontSize: "0.75rem",

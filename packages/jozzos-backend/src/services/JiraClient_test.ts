@@ -172,7 +172,7 @@ describe("JiraClient", () => {
     });
   });
 
-  it("should omit resolved blocking issues from the blocked by list", async () => {
+  it("should return all blocking issues from the blocked by list regardless of status", async () => {
     const mockResponse = {
       ok: true,
       json: async () => ({
@@ -267,8 +267,13 @@ describe("JiraClient", () => {
 
     const issues = await getIssuesByFilter(mockConfig, "TEST-1");
 
-    expect(issues[0].blockingIssues).toHaveLength(1);
+    expect(issues[0].blockingIssues).toHaveLength(6);
     expect(issues[0].blockingIssues![0].key).toBe("BLOCK-1");
+    expect(issues[0].blockingIssues![1].key).toBe("BLOCK-2");
+    expect(issues[0].blockingIssues![2].key).toBe("BLOCK-3");
+    expect(issues[0].blockingIssues![3].key).toBe("BLOCK-4");
+    expect(issues[0].blockingIssues![4].key).toBe("BLOCK-5");
+    expect(issues[0].blockingIssues![5].key).toBe("BLOCK-6");
   });
 
   it("should format JQL queries properly when they are not numbers", async () => {
