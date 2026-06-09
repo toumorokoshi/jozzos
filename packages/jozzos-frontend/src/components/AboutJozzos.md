@@ -14,7 +14,7 @@ Standard trackers often hide blocker hierarchies or make it difficult to visuali
 
 #### How do I use it?
 
-1. **Connect to Jira**: Go to the **Settings** page and add your Jira domain, email, and API key.
-2. **Search Issues**: On the **Issues** page, enter a Jira Filter ID or raw JQL string (e.g. `project = TEST`) in the query input.
+1. **Connect to Jira**: Go to the Settings page (under the left hand hamburger icon) and add your Jira domain, email, and API key.
+2. **Search Issues**: On the Issues page, enter a Jira Filter ID or raw JQL string (e.g. `project = TEST`) in the query input.
 3. **Inspect Blockers**: Look for red lock icons or expand collapsible blocker tree rows to explore recursive blocker hierarchies.
 4. **Edit Inline**: Double-click any editable cell (Summary, Status, Assignee, Reporter) to make changes and save them instantly to Jira.
