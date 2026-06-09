@@ -6,6 +6,25 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+function sanitizeHeaders(
+  headers: Record<string, unknown> | undefined,
+): Record<string, unknown> {
+  if (!headers) return {};
+  const sanitized = { ...headers };
+  const sensitiveKeys = [
+    "authorization",
+    "x-jira-authorization",
+    "cookie",
+    "set-cookie",
+  ];
+  Object.keys(sanitized).forEach((key) => {
+    if (sensitiveKeys.includes(key.toLowerCase())) {
+      sanitized[key] = "[REDACTED]";
+    }
+  });
+  return sanitized;
+}
+
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, path.resolve(__dirname, "../../"), "");
@@ -35,7 +54,10 @@ export default defineConfig(({ mode }) => {
                 (req.headers["x-jira-domain"] as string) || jiraHostname;
               const currentTarget = `https://${domain}`;
               console.log(`[Proxy] Incoming request: ${req.method} ${req.url}`);
-              console.log("[Proxy] Incoming headers:", req.headers);
+              console.log(
+                "[Proxy] Incoming headers:",
+                sanitizeHeaders(req.headers),
+              );
               console.log(
                 `[Proxy] Forwarding to: ${proxyReq.method} ${currentTarget}${proxyReq.path}`,
               );
@@ -65,7 +87,10 @@ export default defineConfig(({ mode }) => {
                 }
               }
 
-              console.log("[Proxy] Forwarded headers:", proxyReq.getHeaders());
+              console.log(
+                "[Proxy] Forwarded headers:",
+                sanitizeHeaders(proxyReq.getHeaders()),
+              );
             });
             proxy.on("proxyRes", (proxyRes, req) => {
               console.log(
