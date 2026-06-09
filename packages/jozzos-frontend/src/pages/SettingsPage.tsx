@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { useConfig } from "../context/ConfigContext";
 
 export const SettingsPage: React.FC = () => {
+  const [showTutorial, setShowTutorial] = useState(false);
   const {
     apiKey,
     setApiKey,
@@ -62,16 +63,122 @@ export const SettingsPage: React.FC = () => {
             />
           </div>
           <div>
-            <label
+            <div
               style={{
-                display: "block",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.5rem",
                 marginBottom: "0.5rem",
-                fontSize: "0.9rem",
-                color: "var(--text-secondary)",
               }}
             >
-              API Key / Token
-            </label>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: "0.9rem",
+                  color: "var(--text-secondary)",
+                }}
+              >
+                API Key / Token
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowTutorial(!showTutorial)}
+                style={{
+                  background: "rgba(255, 255, 255, 0.05)",
+                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                  borderRadius: "50%",
+                  width: "18px",
+                  height: "18px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "var(--accent-secondary)",
+                  cursor: "pointer",
+                  fontSize: "0.75rem",
+                  fontWeight: "bold",
+                  transition: "all var(--transition-fast)",
+                  padding: 0,
+                  outline: "none",
+                }}
+                title="How to generate a Jira API token"
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background =
+                    "rgba(102, 252, 241, 0.15)";
+                  e.currentTarget.style.borderColor = "var(--accent-secondary)";
+                  e.currentTarget.style.boxShadow =
+                    "0 0 8px rgba(102, 252, 241, 0.4)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background =
+                    "rgba(255, 255, 255, 0.05)";
+                  e.currentTarget.style.borderColor =
+                    "rgba(255, 255, 255, 0.15)";
+                  e.currentTarget.style.boxShadow = "none";
+                }}
+              >
+                ?
+              </button>
+            </div>
+            {showTutorial && (
+              <div
+                className="animate-fade-in"
+                style={{
+                  background: "rgba(102, 252, 241, 0.05)",
+                  border: "1px solid rgba(102, 252, 241, 0.2)",
+                  borderRadius: "6px",
+                  padding: "0.8rem 1rem",
+                  marginBottom: "0.75rem",
+                  fontSize: "0.85rem",
+                  color: "var(--text-secondary)",
+                  lineHeight: "1.4",
+                }}
+              >
+                <h4
+                  style={{
+                    margin: "0 0 0.5rem 0",
+                    color: "var(--text-primary)",
+                  }}
+                >
+                  How to generate a Jira API token
+                </h4>
+                <ol
+                  style={{
+                    margin: 0,
+                    paddingLeft: "1.2rem",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.25rem",
+                  }}
+                >
+                  <li>
+                    Go to{" "}
+                    <a
+                      href="https://id.atlassian.com/manage-profile/security/api-tokens"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        color: "var(--accent-secondary)",
+                        textDecoration: "underline",
+                      }}
+                    >
+                      Atlassian API Tokens
+                    </a>
+                    .
+                  </li>
+                  <li>
+                    Click <strong>Create API token</strong>.
+                  </li>
+                  <li>
+                    Enter a label (e.g. <code>jozzos</code>).
+                  </li>
+                  <li>
+                    Click <strong>Create</strong>, then copy the generated
+                    token.
+                  </li>
+                  <li>Paste the token into the field below.</li>
+                </ol>
+              </div>
+            )}
             <input
               type="password"
               className="input-field"
