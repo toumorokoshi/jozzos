@@ -45,6 +45,26 @@ export default defineConfig(({ mode }) => {
               proxyReq.setHeader("Origin", currentTarget);
               proxyReq.removeHeader("referer");
 
+              const jiraAuth = req.headers["x-jira-authorization"];
+              if (jiraAuth) {
+                proxyReq.removeHeader("authorization");
+                proxyReq.removeHeader("Authorization");
+                const authVal = Array.isArray(jiraAuth)
+                  ? jiraAuth[0]
+                  : jiraAuth;
+                proxyReq.setHeader("Authorization", authVal);
+                proxyReq.removeHeader("x-jira-authorization");
+              } else {
+                const auth =
+                  req.headers["authorization"] || req.headers["Authorization"];
+                if (auth) {
+                  proxyReq.removeHeader("authorization");
+                  proxyReq.removeHeader("Authorization");
+                  const authVal = Array.isArray(auth) ? auth[0] : auth;
+                  proxyReq.setHeader("Authorization", authVal);
+                }
+              }
+
               console.log("[Proxy] Forwarded headers:", proxyReq.getHeaders());
             });
             proxy.on("proxyRes", (proxyRes, req) => {
