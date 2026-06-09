@@ -118,4 +118,55 @@ describe("JiraProxy", () => {
     expect(writtenHeaders["content-length"]).toBeUndefined();
     expect(writtenHeaders["transfer-encoding"]).toBeUndefined();
   });
+
+  it("should map x-jira-authorization header to authorization header and strip x-jira-authorization", async () => {
+    const mockResponse = {
+      status: 200,
+      headers: new Map([["content-type", "application/json"]]),
+      arrayBuffer: async () =>
+        new TextEncoder().encode(JSON.stringify({ ok: true })).buffer,
+      body: true,
+    };
+
+    vi.mocked(fetch).mockResolvedValue(mockResponse as unknown as Response);
+
+    const proxy = createJiraProxy({
+      defaultJiraDomain: "my-domain.atlassian.net",
+      apiPrefix: "/api/jira",
+    });
+
+    const req = {
+      url: "/api/jira/rest/api/3/search",
+      method: "GET",
+      headers: {
+        "x-jira-authorization": "Basic abc",
+      },
+      [Symbol.asyncIterator]: async function* () {},
+    } as unknown as IncomingMessage;
+
+    const res = {
+      statusCode: 200,
+      setHeader: () => {},
+      end: () => {},
+    } as unknown as ServerResponse;
+
+    await proxy(req, res);
+
+    expect(fetch).toHaveBeenCalledWith(
+      "https://my-domain.atlassian.net/rest/api/3/search",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          authorization: "Basic abc",
+        }),
+      }),
+    );
+    expect(fetch).toHaveBeenCalledWith(
+      "https://my-domain.atlassian.net/rest/api/3/search",
+      expect.objectContaining({
+        headers: expect.not.objectContaining({
+          "x-jira-authorization": expect.any(String),
+        }),
+      }),
+    );
+  });
 });

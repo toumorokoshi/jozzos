@@ -1,20 +1,26 @@
 import type { Issue, IssueTrackerConfig } from "../models/Issue";
 
-const getAuthHeaders = (config: IssueTrackerConfig): HeadersInit => {
+const getAuthHeaders = (
+  config: IssueTrackerConfig,
+  useProxy = false,
+): HeadersInit => {
   const headers: HeadersInit = {
     Accept: "application/json",
     "Content-Type": "application/json",
   };
 
-  if (config.apiToken) {
-    if (config.userEmail) {
-      // Basic Auth
-      const encoded = btoa(`${config.userEmail}:${config.apiToken}`);
-      headers["Authorization"] = `Basic ${encoded}`;
-    } else {
-      // Bearer Token
-      headers["Authorization"] = `Bearer ${config.apiToken}`;
-    }
+  if (!config.apiToken) {
+    return headers;
+  }
+
+  const authHeader = useProxy ? "X-Jira-Authorization" : "Authorization";
+  if (config.userEmail) {
+    // Basic Auth
+    const encoded = btoa(`${config.userEmail}:${config.apiToken}`);
+    headers[authHeader] = `Basic ${encoded}`;
+  } else {
+    // Bearer Token
+    headers[authHeader] = `Bearer ${config.apiToken}`;
   }
 
   return headers;
@@ -103,7 +109,7 @@ export const getIssuesByFilter = async (
     jql,
   )}&fields=${fieldsParam}`;
 
-  const headers = getAuthHeaders(config) as Record<string, string>;
+  const headers = getAuthHeaders(config, useProxy) as Record<string, string>;
   if (useProxy && config.jiraDomain) {
     headers["x-jira-domain"] = config.jiraDomain;
   }
@@ -204,7 +210,7 @@ export const getJiraFields = async (
   const baseUri = useProxy ? "/api/jira" : `https://${config.jiraDomain}`;
   const url = `${baseUri}/rest/api/3/field`;
 
-  const headers = getAuthHeaders(config) as Record<string, string>;
+  const headers = getAuthHeaders(config, useProxy) as Record<string, string>;
   if (useProxy && config.jiraDomain) {
     headers["x-jira-domain"] = config.jiraDomain;
   }
@@ -233,7 +239,7 @@ export const updateIssueFields = async (
   const baseUri = useProxy ? "/api/jira" : `https://${config.jiraDomain}`;
   const url = `${baseUri}/rest/api/3/issue/${issueIdOrKey}`;
 
-  const headers = getAuthHeaders(config) as Record<string, string>;
+  const headers = getAuthHeaders(config, useProxy) as Record<string, string>;
   if (useProxy && config.jiraDomain) {
     headers["x-jira-domain"] = config.jiraDomain;
   }
@@ -260,7 +266,7 @@ export const getAvailableTransitions = async (
   const baseUri = useProxy ? "/api/jira" : `https://${config.jiraDomain}`;
   const url = `${baseUri}/rest/api/3/issue/${issueIdOrKey}/transitions`;
 
-  const headers = getAuthHeaders(config) as Record<string, string>;
+  const headers = getAuthHeaders(config, useProxy) as Record<string, string>;
   if (useProxy && config.jiraDomain) {
     headers["x-jira-domain"] = config.jiraDomain;
   }
@@ -293,7 +299,7 @@ export const transitionIssue = async (
   const baseUri = useProxy ? "/api/jira" : `https://${config.jiraDomain}`;
   const url = `${baseUri}/rest/api/3/issue/${issueIdOrKey}/transitions`;
 
-  const headers = getAuthHeaders(config) as Record<string, string>;
+  const headers = getAuthHeaders(config, useProxy) as Record<string, string>;
   if (useProxy && config.jiraDomain) {
     headers["x-jira-domain"] = config.jiraDomain;
   }
@@ -321,7 +327,7 @@ export const assignIssue = async (
   const baseUri = useProxy ? "/api/jira" : `https://${config.jiraDomain}`;
   const url = `${baseUri}/rest/api/3/issue/${issueIdOrKey}/assignee`;
 
-  const headers = getAuthHeaders(config) as Record<string, string>;
+  const headers = getAuthHeaders(config, useProxy) as Record<string, string>;
   if (useProxy && config.jiraDomain) {
     headers["x-jira-domain"] = config.jiraDomain;
   }
@@ -350,7 +356,7 @@ export const searchJiraUsers = async (
     query,
   )}`;
 
-  const headers = getAuthHeaders(config) as Record<string, string>;
+  const headers = getAuthHeaders(config, useProxy) as Record<string, string>;
   if (useProxy && config.jiraDomain) {
     headers["x-jira-domain"] = config.jiraDomain;
   }
@@ -379,7 +385,7 @@ export const addBlocker = async (
   const baseUri = useProxy ? "/api/jira" : `https://${config.jiraDomain}`;
   const url = `${baseUri}/rest/api/3/issueLink`;
 
-  const headers = getAuthHeaders(config) as Record<string, string>;
+  const headers = getAuthHeaders(config, useProxy) as Record<string, string>;
   if (useProxy && config.jiraDomain) {
     headers["x-jira-domain"] = config.jiraDomain;
   }

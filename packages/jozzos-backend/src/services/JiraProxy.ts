@@ -40,6 +40,12 @@ export function createJiraProxy(options: JiraProxyOptions = {}) {
       delete headers["referer"];
       delete headers["x-jira-domain"];
 
+      const jiraAuth = headers["x-jira-authorization"];
+      if (jiraAuth) {
+        headers["authorization"] = jiraAuth;
+        delete headers["x-jira-authorization"];
+      }
+
       // Fetch the response
       const response = await fetch(destUrl, {
         method: req.method,

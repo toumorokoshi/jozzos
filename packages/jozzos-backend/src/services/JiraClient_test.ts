@@ -400,4 +400,70 @@ describe("JiraClient", () => {
       );
     });
   });
+
+  describe("Authentication headers", () => {
+    it("should send Authorization header when useProxy is false", async () => {
+      const mockResponse = { ok: true, json: async () => ({ issues: [] }) };
+      vi.mocked(fetch).mockResolvedValue(mockResponse as unknown as Response);
+
+      await getIssuesByFilter(
+        {
+          apiToken: "test-token",
+          userEmail: "test@example.com",
+          jiraDomain: "test-domain.atlassian.net",
+          useProxy: false,
+        },
+        "10001",
+      );
+
+      expect(fetch).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: `Basic ${btoa("test@example.com:test-token")}`,
+          }),
+        }),
+      );
+      expect(fetch).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          headers: expect.not.objectContaining({
+            "X-Jira-Authorization": expect.any(String),
+          }),
+        }),
+      );
+    });
+
+    it("should send X-Jira-Authorization header when useProxy is true", async () => {
+      const mockResponse = { ok: true, json: async () => ({ issues: [] }) };
+      vi.mocked(fetch).mockResolvedValue(mockResponse as unknown as Response);
+
+      await getIssuesByFilter(
+        {
+          apiToken: "test-token",
+          userEmail: "test@example.com",
+          jiraDomain: "test-domain.atlassian.net",
+          useProxy: true,
+        },
+        "10001",
+      );
+
+      expect(fetch).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            "X-Jira-Authorization": `Basic ${btoa("test@example.com:test-token")}`,
+          }),
+        }),
+      );
+      expect(fetch).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          headers: expect.not.objectContaining({
+            Authorization: expect.any(String),
+          }),
+        }),
+      );
+    });
+  });
 });
