@@ -220,6 +220,42 @@ describe("JiraClient", () => {
                     },
                   },
                 },
+                {
+                  id: "link-4",
+                  type: { name: "Blocks" },
+                  inwardIssue: {
+                    id: "1005",
+                    key: "BLOCK-4",
+                    fields: {
+                      summary: "Blocking Issue 4",
+                      status: { name: "Completed" },
+                    },
+                  },
+                },
+                {
+                  id: "link-5",
+                  type: { name: "Blocks" },
+                  inwardIssue: {
+                    id: "1006",
+                    key: "BLOCK-5",
+                    fields: {
+                      summary: "Blocking Issue 5",
+                      status: { name: "Cancelled" },
+                    },
+                  },
+                },
+                {
+                  id: "link-6",
+                  type: { name: "Blocks" },
+                  inwardIssue: {
+                    id: "1007",
+                    key: "BLOCK-6",
+                    fields: {
+                      summary: "Blocking Issue 6",
+                      status: { name: "Canceled" },
+                    },
+                  },
+                },
               ],
             },
           },

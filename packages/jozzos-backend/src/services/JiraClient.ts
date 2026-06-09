@@ -153,7 +153,10 @@ export const getIssuesByFilter = async (
               inwardStatus === "done" ||
               inwardStatus === "resolved" ||
               inwardStatus === "closed" ||
-              inwardStatus === "complete";
+              inwardStatus === "complete" ||
+              inwardStatus === "completed" ||
+              inwardStatus === "cancelled" ||
+              inwardStatus === "canceled";
 
             if (!isResolved) {
               blockedBy.push({
