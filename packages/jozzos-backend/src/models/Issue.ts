@@ -14,7 +14,7 @@ export interface Issue {
   created?: string;
   updated?: string;
   customFields?: Record<string, unknown>;
-  isRecursiveBlocker?: boolean;
+  isNestedBlocker?: boolean;
 }
 
 export interface IssueTrackerConfig {

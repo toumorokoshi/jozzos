@@ -891,41 +891,31 @@ export const IssuesPage: React.FC = () => {
         }
       }
 
-      // Recursively enrich the blockingIssues arrays and track recursive blockers
-      const enrichBlockersRecursive = (
-        issue: Issue,
-        seen: Set<string> = new Set(),
-        isRecursive: boolean = false,
-      ) => {
-        if (seen.has(issue.key)) {
-          return;
-        }
-        seen.add(issue.key);
-
+      // Recursively enrich the blockingIssues arrays and track nested blockers
+      // A nested blocker is one that appears under another blocker (depth >= 1)
+      const enrichBlockersRecursive = (issue: Issue, depth: number = 0) => {
         if (issue.blockingIssues) {
           issue.blockingIssues = issue.blockingIssues.map((blocker) => {
             const detailed = blockerLookup.get(blocker.key);
             if (detailed) {
               const enriched = { ...detailed };
-              // Mark as recursive if we've seen this key before or if parent is recursive
-              const nextIsRecursive = isRecursive || seen.has(blocker.key);
-              enrichBlockersRecursive(enriched, new Set(seen), nextIsRecursive);
-              return { ...enriched, isRecursiveBlocker: nextIsRecursive };
+              // Mark as nested blocker if depth >= 1 (under another blocker)
+              enrichBlockersRecursive(enriched, depth + 1);
+              return { ...enriched, isNestedBlocker: depth >= 1 };
             }
             return blocker;
           });
         }
 
-        // Also update blockedBy to mark recursive blockers
+        // Also update blockedBy to mark nested blockers
         if (issue.blockedBy) {
           issue.blockedBy = issue.blockedBy.map((blocker) => {
             const detailed = blockerLookup.get(blocker.key);
             if (detailed) {
               const enriched = { ...detailed };
-              // Mark as recursive if we've seen this key before or if parent is recursive
-              const nextIsRecursive = isRecursive || seen.has(blocker.key);
-              enrichBlockersRecursive(enriched, new Set(seen), nextIsRecursive);
-              return { ...enriched, isRecursiveBlocker: nextIsRecursive };
+              // Mark as nested blocker if depth >= 1 (under another blocker)
+              enrichBlockersRecursive(enriched, depth + 1);
+              return { ...enriched, isNestedBlocker: depth >= 1 };
             }
             return blocker;
           });
@@ -2531,7 +2521,7 @@ export const IssuesPage: React.FC = () => {
                                         .filter(
                                           (b) =>
                                             !isStatusClosed(b.status) &&
-                                            !b.isRecursiveBlocker,
+                                            !b.isNestedBlocker,
                                         )
                                         .map((blocker) => (
                                           <a
@@ -2602,7 +2592,7 @@ export const IssuesPage: React.FC = () => {
                                   issue.blockedBy.filter(
                                     (b) =>
                                       !isStatusClosed(b.status) &&
-                                      b.isRecursiveBlocker,
+                                      b.isNestedBlocker,
                                   ).length > 0 && (
                                     <div
                                       style={{
@@ -2615,7 +2605,7 @@ export const IssuesPage: React.FC = () => {
                                         .filter(
                                           (b) =>
                                             !isStatusClosed(b.status) &&
-                                            b.isRecursiveBlocker,
+                                            b.isNestedBlocker,
                                         )
                                         .map((blocker) => (
                                           <a
@@ -2624,7 +2614,7 @@ export const IssuesPage: React.FC = () => {
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             onClick={(e) => e.stopPropagation()}
-                                            title={`Recursively blocked by ${blocker.key}: ${blocker.summary}`}
+                                            title={`Nested blocked by ${blocker.key}: ${blocker.summary}`}
                                             style={{
                                               display: "inline-flex",
                                               alignItems: "center",
@@ -2675,10 +2665,7 @@ export const IssuesPage: React.FC = () => {
                                               ></rect>
                                               <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
                                             </svg>
-                                            <span>
-                                              Recursively blocked by{" "}
-                                              {blocker.key}
-                                            </span>
+                                            <span>Nested by {blocker.key}</span>
                                           </a>
                                         ))}
                                     </div>
