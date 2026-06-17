@@ -891,10 +891,11 @@ export const IssuesPage: React.FC = () => {
         }
       }
 
-      // Recursively enrich the blockingIssues arrays
+      // Recursively enrich the blockingIssues arrays and track recursive blockers
       const enrichBlockersRecursive = (
         issue: Issue,
         seen: Set<string> = new Set(),
+        isRecursive: boolean = false,
       ) => {
         if (seen.has(issue.key)) {
           return;
@@ -906,8 +907,25 @@ export const IssuesPage: React.FC = () => {
             const detailed = blockerLookup.get(blocker.key);
             if (detailed) {
               const enriched = { ...detailed };
-              enrichBlockersRecursive(enriched, new Set(seen));
-              return enriched;
+              // Mark as recursive if we've seen this key before or if parent is recursive
+              const nextIsRecursive = isRecursive || seen.has(blocker.key);
+              enrichBlockersRecursive(enriched, new Set(seen), nextIsRecursive);
+              return { ...enriched, isRecursiveBlocker: nextIsRecursive };
+            }
+            return blocker;
+          });
+        }
+
+        // Also update blockedBy to mark recursive blockers
+        if (issue.blockedBy) {
+          issue.blockedBy = issue.blockedBy.map((blocker) => {
+            const detailed = blockerLookup.get(blocker.key);
+            if (detailed) {
+              const enriched = { ...detailed };
+              // Mark as recursive if we've seen this key before or if parent is recursive
+              const nextIsRecursive = isRecursive || seen.has(blocker.key);
+              enrichBlockersRecursive(enriched, new Set(seen), nextIsRecursive);
+              return { ...enriched, isRecursiveBlocker: nextIsRecursive };
             }
             return blocker;
           });
@@ -2511,7 +2529,9 @@ export const IssuesPage: React.FC = () => {
                                     >
                                       {issue.blockedBy
                                         .filter(
-                                          (b) => !isStatusClosed(b.status),
+                                          (b) =>
+                                            !isStatusClosed(b.status) &&
+                                            !b.isRecursiveBlocker,
                                         )
                                         .map((blocker) => (
                                           <a
@@ -2573,6 +2593,91 @@ export const IssuesPage: React.FC = () => {
                                             </svg>
                                             <span>
                                               Blocked by {blocker.key}
+                                            </span>
+                                          </a>
+                                        ))}
+                                    </div>
+                                  )}
+                                {issue.blockedBy &&
+                                  issue.blockedBy.filter(
+                                    (b) =>
+                                      !isStatusClosed(b.status) &&
+                                      b.isRecursiveBlocker,
+                                  ).length > 0 && (
+                                    <div
+                                      style={{
+                                        display: "flex",
+                                        gap: "0.35rem",
+                                        flexWrap: "wrap",
+                                      }}
+                                    >
+                                      {issue.blockedBy
+                                        .filter(
+                                          (b) =>
+                                            !isStatusClosed(b.status) &&
+                                            b.isRecursiveBlocker,
+                                        )
+                                        .map((blocker) => (
+                                          <a
+                                            key={blocker.id}
+                                            href={blocker.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            onClick={(e) => e.stopPropagation()}
+                                            title={`Recursively blocked by ${blocker.key}: ${blocker.summary}`}
+                                            style={{
+                                              display: "inline-flex",
+                                              alignItems: "center",
+                                              gap: "0.25rem",
+                                              background:
+                                                "rgba(255, 215, 0, 0.12)",
+                                              border:
+                                                "1px solid rgba(255, 215, 0, 0.25)",
+                                              color: "#ffd700",
+                                              padding: "0.1rem 0.4rem",
+                                              borderRadius: "4px",
+                                              fontSize: "0.7rem",
+                                              fontWeight: "600",
+                                              textDecoration: "none",
+                                              transition:
+                                                "all var(--transition-fast)",
+                                            }}
+                                            onMouseEnter={(e) => {
+                                              e.currentTarget.style.background =
+                                                "rgba(255, 215, 0, 0.25)";
+                                              e.currentTarget.style.borderColor =
+                                                "#ffd700";
+                                            }}
+                                            onMouseLeave={(e) => {
+                                              e.currentTarget.style.background =
+                                                "rgba(255, 215, 0, 0.12)";
+                                              e.currentTarget.style.borderColor =
+                                                "rgba(255, 215, 0, 0.25)";
+                                            }}
+                                          >
+                                            <svg
+                                              width="10"
+                                              height="10"
+                                              viewBox="0 0 24 24"
+                                              fill="none"
+                                              stroke="currentColor"
+                                              strokeWidth="3"
+                                              strokeLinecap="round"
+                                              strokeLinejoin="round"
+                                            >
+                                              <rect
+                                                x="3"
+                                                y="11"
+                                                width="18"
+                                                height="11"
+                                                rx="2"
+                                                ry="2"
+                                              ></rect>
+                                              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                                            </svg>
+                                            <span>
+                                              Recursively blocked by{" "}
+                                              {blocker.key}
                                             </span>
                                           </a>
                                         ))}

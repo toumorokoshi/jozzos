@@ -1,6 +1,8 @@
 # Jozzos
 
-Jozzos is a premium UI for issue management systems, designed for superusers who want to manage a large project across multiple different dimensions.
+Jozzos is a UI for issue management systems, designed for superusers who want:
+
+-
 
 ## Features
 
