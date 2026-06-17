@@ -891,39 +891,85 @@ export const IssuesPage: React.FC = () => {
         }
       }
 
-      // Recursively enrich the blockingIssues arrays and track nested blockers
-      // A nested blocker is one that appears under another blocker (depth >= 1)
-      const enrichBlockersRecursive = (issue: Issue, depth: number = 0) => {
-        if (issue.blockingIssues) {
-          issue.blockingIssues = issue.blockingIssues.map((blocker) => {
+      // Enrich blockers with nested blocker information
+      // A nested blocker is a blocker of one of the issue's direct blockers
+      const enrichBlockersWithNested = (issue: Issue) => {
+        // First, enrich blockingIssues with full hierarchy
+        const enrichBlockingIssues = (blockers: Issue[]): Issue[] => {
+          return blockers.map((blocker) => {
             const detailed = blockerLookup.get(blocker.key);
             if (detailed) {
               const enriched = { ...detailed };
-              // Mark as nested blocker if depth >= 1 (under another blocker)
-              enrichBlockersRecursive(enriched, depth + 1);
-              return { ...enriched, isNestedBlocker: depth >= 1 };
+              // Recursively enrich this blocker's blocking issues
+              if (enriched.blockingIssues) {
+                enriched.blockingIssues = enrichBlockingIssues(
+                  enriched.blockingIssues,
+                );
+              }
+              return enriched;
             }
             return blocker;
           });
+        };
+
+        if (issue.blockingIssues) {
+          issue.blockingIssues = enrichBlockingIssues(issue.blockingIssues);
         }
 
-        // Also update blockedBy to mark nested blockers
+        // Now identify nested blockers (blockers of blockers)
+        // A nested blocker is any blocker that appears in a blocker's blockingIssues
+        const nestedBlockers: Issue[] = [];
+        const collectNestedBlockers = (
+          blockers: Issue[],
+          seen: Set<string>,
+        ) => {
+          blockers.forEach((blocker) => {
+            if (blocker.blockingIssues) {
+              blocker.blockingIssues.forEach((nested) => {
+                if (nested.key && !seen.has(nested.key)) {
+                  seen.add(nested.key);
+                  nestedBlockers.push(nested);
+                  collectNestedBlockers(nested.blockingIssues || [], seen);
+                }
+              });
+            }
+          });
+        };
+
+        if (issue.blockingIssues) {
+          const seen = new Set<string>();
+          collectNestedBlockers(issue.blockingIssues, seen);
+        }
+
+        // Update blockedBy to include nested blockers
         if (issue.blockedBy) {
+          // First, mark existing blockers as nested if applicable
           issue.blockedBy = issue.blockedBy.map((blocker) => {
             const detailed = blockerLookup.get(blocker.key);
             if (detailed) {
               const enriched = { ...detailed };
-              // Mark as nested blocker if depth >= 1 (under another blocker)
-              enrichBlockersRecursive(enriched, depth + 1);
-              return { ...enriched, isNestedBlocker: depth >= 1 };
+              // Mark as nested if this blocker is also in nestedBlockers
+              return {
+                ...enriched,
+                isNestedBlocker: nestedBlockers.some(
+                  (n) => n.key === blocker.key,
+                ),
+              };
             }
             return blocker;
+          });
+
+          // Add nested blockers that aren't already in blockedBy
+          nestedBlockers.forEach((nested) => {
+            if (!issue.blockedBy.some((b) => b.key === nested.key)) {
+              issue.blockedBy.push({ ...nested, isNestedBlocker: true });
+            }
           });
         }
       };
 
       results.forEach((issue) => {
-        enrichBlockersRecursive(issue);
+        enrichBlockersWithNested(issue);
       });
 
       setIssues(results);
