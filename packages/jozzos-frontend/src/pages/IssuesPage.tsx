@@ -963,10 +963,11 @@ export const IssuesPage: React.FC = () => {
 
           // Add nested blockers that aren't already in blockedBy
           nestedBlockers.forEach((nested) => {
-            if (!issue.blockedBy.some((b) => b.key === nested.key)) {
-              issue.blockedBy.push({ ...nested, isNestedBlocker: true });
+            if (!blockedBy.some((b) => b.key === nested.key)) {
+              blockedBy.push({ ...nested, isNestedBlocker: true });
             }
           });
+          issue.blockedBy = blockedBy;
         }
       };
 
