@@ -1,5 +1,4 @@
-/* eslint-disable react-refresh/only-export-components */
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
 
 interface ConfigContextType {
   apiKey: string;
@@ -12,6 +11,8 @@ interface ConfigContextType {
   setSearchQuery: (query: string) => void;
   searchLoading: boolean;
   setSearchLoading: (loading: boolean) => void;
+  theme: "dark" | "light" | "system";
+  setTheme: (theme: "dark" | "light" | "system") => void;
 }
 
 const ConfigContext = createContext<ConfigContextType | undefined>(undefined);
@@ -32,6 +33,37 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({
     localStorage.getItem("jozzos_search_query") || "",
   );
   const [searchLoading, setSearchLoading] = useState(false);
+  const [theme, setThemeState] = useState<"dark" | "light" | "system">(
+    (localStorage.getItem("jozzos_theme") as "dark" | "light" | "system") ||
+      "system",
+  );
+
+  const setTheme = (nextTheme: "dark" | "light" | "system") => {
+    setThemeState(nextTheme);
+    localStorage.setItem("jozzos_theme", nextTheme);
+  };
+
+  useEffect(() => {
+    const applyTheme = () => {
+      const root = document.documentElement;
+      const resolvedTheme: "dark" | "light" =
+        theme === "system"
+          ? window.matchMedia("(prefers-color-scheme: dark)").matches
+            ? "dark"
+            : "light"
+          : theme;
+      root.setAttribute("data-theme", resolvedTheme);
+    };
+
+    applyTheme();
+
+    if (theme === "system") {
+      const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+      const handler = () => applyTheme();
+      mediaQuery.addEventListener("change", handler);
+      return () => mediaQuery.removeEventListener("change", handler);
+    }
+  }, [theme]);
 
   const setApiKey = (key: string) => {
     setApiKeyState(key);
@@ -66,6 +98,8 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({
         setSearchQuery,
         searchLoading,
         setSearchLoading,
+        theme,
+        setTheme,
       }}
     >
       {children}
@@ -73,6 +107,7 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useConfig = () => {
   const context = useContext(ConfigContext);
   if (context === undefined) {

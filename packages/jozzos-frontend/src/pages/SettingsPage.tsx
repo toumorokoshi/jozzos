@@ -10,6 +10,8 @@ export const SettingsPage: React.FC = () => {
     setUserEmail,
     jiraDomain,
     setJiraDomain,
+    theme,
+    setTheme,
   } = useConfig();
 
   return (
@@ -84,8 +86,8 @@ export const SettingsPage: React.FC = () => {
                 type="button"
                 onClick={() => setShowTutorial(!showTutorial)}
                 style={{
-                  background: "#2a2f38",
-                  border: "1px solid #3a3f48",
+                  background: "var(--btn-secondary-bg)",
+                  border: "1px solid var(--btn-secondary-border)",
                   borderRadius: "50%",
                   width: "18px",
                   height: "18px",
@@ -102,13 +104,17 @@ export const SettingsPage: React.FC = () => {
                 }}
                 title="How to generate a Jira API token"
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "#2a4a4a";
-                  e.currentTarget.style.borderColor = "var(--accent-secondary)";
-                  e.currentTarget.style.boxShadow = "0 0 8px #66fcf1";
+                  e.currentTarget.style.background =
+                    "var(--btn-secondary-hover-bg)";
+                  e.currentTarget.style.borderColor =
+                    "var(--btn-secondary-hover-border)";
+                  e.currentTarget.style.boxShadow =
+                    "0 0 8px var(--btn-secondary-hover-shadow)";
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "#2a2f38";
-                  e.currentTarget.style.borderColor = "#3a3f48";
+                  e.currentTarget.style.background = "var(--btn-secondary-bg)";
+                  e.currentTarget.style.borderColor =
+                    "var(--btn-secondary-border)";
                   e.currentTarget.style.boxShadow = "none";
                 }}
               >
@@ -119,8 +125,8 @@ export const SettingsPage: React.FC = () => {
               <div
                 className="animate-fade-in"
                 style={{
-                  background: "#1a2a2a",
-                  border: "1px solid #2a4a4a",
+                  background: "var(--tutorial-bg)",
+                  border: "1px solid var(--tutorial-border)",
                   borderRadius: "6px",
                   padding: "0.8rem 1rem",
                   marginBottom: "0.75rem",
@@ -182,6 +188,41 @@ export const SettingsPage: React.FC = () => {
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
             />
+          </div>
+
+          <div>
+            <label
+              style={{
+                display: "block",
+                marginBottom: "0.5rem",
+                fontSize: "0.9rem",
+                color: "var(--text-secondary)",
+              }}
+            >
+              Theme Preference
+            </label>
+            <select
+              className="input-field"
+              style={{
+                background: "var(--bg-primary)",
+                border: "1px solid var(--border-color)",
+                borderRadius: "8px",
+                color: "var(--text-primary)",
+                padding: "0.75rem 1rem",
+                fontSize: "1rem",
+                width: "100%",
+                outline: "none",
+                cursor: "pointer",
+              }}
+              value={theme}
+              onChange={(e) =>
+                setTheme(e.target.value as "dark" | "light" | "system")
+              }
+            >
+              <option value="system">System Default</option>
+              <option value="dark">Dark Mode</option>
+              <option value="light">Light Mode</option>
+            </select>
           </div>
         </div>
       </section>

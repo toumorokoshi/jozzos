@@ -201,8 +201,8 @@ export const Layout: React.FC = () => {
               type="button"
               onClick={() => setShowHelpModal(true)}
               style={{
-                background: "#2a2f38",
-                border: "1px solid #3a3f48",
+                background: "var(--btn-secondary-bg)",
+                border: "1px solid var(--btn-secondary-border)",
                 borderRadius: "50%",
                 width: "20px",
                 height: "20px",
@@ -220,13 +220,16 @@ export const Layout: React.FC = () => {
               }}
               title="what is Jozzos and how do I use it?"
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = "#2a4a4a";
+                e.currentTarget.style.background =
+                  "var(--btn-secondary-hover-bg)";
                 e.currentTarget.style.borderColor = "var(--accent-secondary)";
-                e.currentTarget.style.boxShadow = "0 0 8px #66fcf1";
+                e.currentTarget.style.boxShadow =
+                  "0 0 8px var(--btn-secondary-hover-shadow)";
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = "#2a2f38";
-                e.currentTarget.style.borderColor = "#3a3f48";
+                e.currentTarget.style.background = "var(--btn-secondary-bg)";
+                e.currentTarget.style.borderColor =
+                  "var(--btn-secondary-border)";
                 e.currentTarget.style.boxShadow = "none";
               }}
             >
@@ -286,8 +289,10 @@ export const Layout: React.FC = () => {
                 justifyContent: "center",
                 gap: "0.5rem",
                 cursor: jiraUrl ? "pointer" : "not-allowed",
-                background: jiraUrl ? "#2a2f38" : "#151b24",
-                border: "1px solid #3a3f48",
+                background: jiraUrl
+                  ? "var(--btn-secondary-bg)"
+                  : "var(--blocker-row-bg)",
+                border: "1px solid var(--btn-secondary-border)",
                 borderRadius: "6px",
                 color: jiraUrl ? "var(--text-primary)" : "#4a4f58",
                 transition: "all var(--transition-fast)",
@@ -300,14 +305,16 @@ export const Layout: React.FC = () => {
               }}
               onMouseEnter={(e) => {
                 if (jiraUrl) {
-                  e.currentTarget.style.background = "#2a4a4a";
+                  e.currentTarget.style.background =
+                    "var(--btn-secondary-hover-bg)";
                   e.currentTarget.style.borderColor = "var(--accent-secondary)";
                 }
               }}
               onMouseLeave={(e) => {
                 if (jiraUrl) {
-                  e.currentTarget.style.background = "#2a2f38";
-                  e.currentTarget.style.borderColor = "#3a3f48";
+                  e.currentTarget.style.background = "var(--btn-secondary-bg)";
+                  e.currentTarget.style.borderColor =
+                    "var(--btn-secondary-border)";
                 }
               }}
             >
@@ -343,7 +350,7 @@ export const Layout: React.FC = () => {
             left: 0,
             width: "100vw",
             height: "100vh",
-            backgroundColor: "#0b0c10",
+            backgroundColor: "var(--modal-backdrop)",
             zIndex: 1000,
             display: "flex",
             alignItems: "center",
@@ -355,10 +362,10 @@ export const Layout: React.FC = () => {
         >
           <div
             style={{
-              background: "#1f2833",
-              border: "1px solid #2a3a3a",
+              background: "var(--modal-bg)",
+              border: "1px solid var(--modal-border)",
               borderRadius: "16px",
-              boxShadow: "0 20px 50px #000000",
+              boxShadow: "var(--modal-shadow)",
               width: "90vw",
               maxWidth: "600px",
               display: "flex",

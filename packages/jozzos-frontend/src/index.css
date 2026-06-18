@@ -1,7 +1,14 @@
 @import url("https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap");
 
 :root {
-  /* Color Palette - Sleek Dark Mode Primary */
+  /* Typography */
+  --font-family: "Outfit", system-ui, -apple-system, sans-serif;
+
+  /* Animations */
+  --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* DEFAULT Theme: Dark Mode Color Palette */
   --bg-primary: #0b0c10;
   --bg-secondary: #1f2833;
   --text-primary: #f0f2f5;
@@ -15,14 +22,237 @@
   --border-color: #2a2f38;
   --panel-bg: #1f2833;
   --panel-border: #2a3a3a;
-  --panel-shadow: 0 8px 32px 0 #000000;
+  --panel-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
 
-  /* Typography */
-  --font-family: "Outfit", system-ui, -apple-system, sans-serif;
+  /* Buttons & Context elements */
+  --btn-secondary-bg: #2a2f38;
+  --btn-secondary-border: #3a3f48;
+  --btn-secondary-hover-bg: #2a4a4a;
+  --btn-secondary-hover-border: var(--accent-secondary);
+  --btn-secondary-hover-shadow: #66fcf1;
+  --blocker-row-bg: #151b24;
+  --tutorial-bg: #1a2a2a;
+  --tutorial-border: #2a4a4a;
 
-  /* Animations */
-  --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --modal-backdrop: rgba(11, 12, 16, 0.75);
+  --modal-bg: #1f2833;
+  --modal-border: #2a3a3a;
+  --modal-shadow: 0 20px 50px #000000;
+
+  /* Semantic Theme Variables */
+  --color-error: #ff6b6b;
+  --color-warning: #ffd700;
+  --btn-danger-hover-bg: #3a1a1a;
+  --btn-warning-hover-bg: #3a301a;
+  --status-closed-bg: #2a2f38;
+  --status-closed-color: var(--text-secondary);
+  --status-active-bg: #3a1a1a;
+  --status-active-color: #ff8787;
+  --alert-error-bg: #3a1a1a;
+  --alert-error-color: #ff8787;
+  --alert-error-border: #5a2a2a;
+  --alert-success-bg: #1a3a1a;
+  --alert-success-color: #87ff87;
+  --alert-success-border: #2a5a2a;
+  --row-bg: #0f1219;
+  --row-hover-bg: #1a1f2a;
+  --panel-hover-border: #3a5a5a;
+  --sortable-header-hover-bg: #1a2a2a;
+}
+
+/* Force dark theme explicitly */
+html[data-theme="dark"] {
+  --bg-primary: #0b0c10;
+  --bg-secondary: #1f2833;
+  --text-primary: #f0f2f5;
+  --text-secondary: #c5c6c7;
+
+  /* Accent Colors */
+  --accent-primary: #45a29e;
+  --accent-secondary: #66fcf1;
+
+  /* UI Elements */
+  --border-color: #2a2f38;
+  --panel-bg: #1f2833;
+  --panel-border: #2a3a3a;
+  --panel-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+
+  /* Buttons & Context elements */
+  --btn-secondary-bg: #2a2f38;
+  --btn-secondary-border: #3a3f48;
+  --btn-secondary-hover-bg: #2a4a4a;
+  --btn-secondary-hover-border: var(--accent-secondary);
+  --btn-secondary-hover-shadow: #66fcf1;
+  --blocker-row-bg: #151b24;
+  --tutorial-bg: #1a2a2a;
+  --tutorial-border: #2a4a4a;
+
+  --modal-backdrop: rgba(11, 12, 16, 0.75);
+  --modal-bg: #1f2833;
+  --modal-border: #2a3a3a;
+  --modal-shadow: 0 20px 50px #000000;
+
+  /* Semantic Theme Variables */
+  --color-error: #ff6b6b;
+  --color-warning: #ffd700;
+  --btn-danger-hover-bg: #3a1a1a;
+  --btn-warning-hover-bg: #3a301a;
+  --status-closed-bg: #2a2f38;
+  --status-closed-color: var(--text-secondary);
+  --status-active-bg: #3a1a1a;
+  --status-active-color: #ff8787;
+  --alert-error-bg: #3a1a1a;
+  --alert-error-color: #ff8787;
+  --alert-error-border: #5a2a2a;
+  --alert-success-bg: #1a3a1a;
+  --alert-success-color: #87ff87;
+  --alert-success-border: #2a5a2a;
+  --row-bg: #0f1219;
+  --row-hover-bg: #1a1f2a;
+  --panel-hover-border: #3a5a5a;
+  --sortable-header-hover-bg: #1a2a2a;
+
+  /* Dependency variables */
+  --dependency-active-bg: #221414;
+  --dependency-active-border: #441a1a;
+  --dependency-active-hover-bg: #331818;
+  --dependency-active-hover-border: #662222;
+  --dependency-blocks-bg: #0e1c26;
+  --dependency-blocks-border: #1a364a;
+  --dependency-blocks-hover-bg: #15293a;
+  --dependency-blocks-hover-border: #254d6b;
+  --color-info: #4dabf7;
+  --color-info-light: #a5d8ff;
+}
+
+/* Force dark theme explicitly */
+html[data-theme="dark"] {
+  --bg-primary: #0b0c10;
+  --bg-secondary: #1f2833;
+  --text-primary: #f0f2f5;
+  --text-secondary: #c5c6c7;
+
+  /* Accent Colors */
+  --accent-primary: #45a29e;
+  --accent-secondary: #66fcf1;
+
+  /* UI Elements */
+  --border-color: #2a2f38;
+  --panel-bg: #1f2833;
+  --panel-border: #2a3a3a;
+  --panel-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+
+  /* Buttons & Context elements */
+  --btn-secondary-bg: #2a2f38;
+  --btn-secondary-border: #3a3f48;
+  --btn-secondary-hover-bg: #2a4a4a;
+  --btn-secondary-hover-border: var(--accent-secondary);
+  --btn-secondary-hover-shadow: #66fcf1;
+  --blocker-row-bg: #151b24;
+  --tutorial-bg: #1a2a2a;
+  --tutorial-border: #2a4a4a;
+
+  --modal-backdrop: rgba(11, 12, 16, 0.75);
+  --modal-bg: #1f2833;
+  --modal-border: #2a3a3a;
+  --modal-shadow: 0 20px 50px #000000;
+
+  /* Semantic Theme Variables */
+  --color-error: #ff6b6b;
+  --color-warning: #ffd700;
+  --btn-danger-hover-bg: #3a1a1a;
+  --btn-warning-hover-bg: #3a301a;
+  --status-closed-bg: #2a2f38;
+  --status-closed-color: var(--text-secondary);
+  --status-active-bg: #3a1a1a;
+  --status-active-color: #ff8787;
+  --alert-error-bg: #3a1a1a;
+  --alert-error-color: #ff8787;
+  --alert-error-border: #5a2a2a;
+  --alert-success-bg: #1a3a1a;
+  --alert-success-color: #87ff87;
+  --alert-success-border: #2a5a2a;
+  --row-bg: #0f1219;
+  --row-hover-bg: #1a1f2a;
+  --panel-hover-border: #3a5a5a;
+  --sortable-header-hover-bg: #1a2a2a;
+
+  /* Dependency variables */
+  --dependency-active-bg: #221414;
+  --dependency-active-border: #441a1a;
+  --dependency-active-hover-bg: #331818;
+  --dependency-active-hover-border: #662222;
+  --dependency-blocks-bg: #0e1c26;
+  --dependency-blocks-border: #1a364a;
+  --dependency-blocks-hover-bg: #15293a;
+  --dependency-blocks-hover-border: #254d6b;
+  --color-info: #4dabf7;
+  --color-info-light: #a5d8ff;
+}
+
+/* Light theme overrides */
+html[data-theme="light"] {
+  --bg-primary: #f4f6f9;
+  --bg-secondary: #ffffff;
+  --text-primary: #1a202c;
+  --text-secondary: #4a5568;
+
+  /* Accent Colors */
+  --accent-primary: #319795;
+  --accent-secondary: #00a3c4;
+
+  /* UI Elements */
+  --border-color: #e2e8f0;
+  --panel-bg: #ffffff;
+  --panel-border: #cbd5e0;
+  --panel-shadow: 0 8px 32px 0 rgba(160, 174, 192, 0.15);
+
+  /* Buttons & Context elements */
+  --btn-secondary-bg: #cbd5e0;
+  --btn-secondary-border: #cbd5e0;
+  --btn-secondary-hover-bg: #e6fffa;
+  --btn-secondary-hover-border: var(--accent-primary);
+  --btn-secondary-hover-shadow: #319795;
+  --blocker-row-bg: #edf2f7;
+  --tutorial-bg: #e6fffa;
+  --tutorial-border: #b2f5ea;
+
+  --modal-backdrop: rgba(226, 232, 240, 0.8);
+  --modal-bg: #ffffff;
+  --modal-border: #cbd5e0;
+  --modal-shadow: 0 20px 50px rgba(160, 174, 192, 0.2);
+
+  /* Semantic Theme Variables */
+  --color-error: #e53e3e;
+  --color-warning: #b7791f;
+  --btn-danger-hover-bg: #fed7d7;
+  --btn-warning-hover-bg: #fefcbf;
+  --status-closed-bg: #cbd5e0;
+  --status-closed-color: var(--text-secondary);
+  --status-active-bg: #fed7d7;
+  --status-active-color: #c53030;
+  --alert-error-bg: #fed7d7;
+  --alert-error-color: #c53030;
+  --alert-error-border: #feb2b2;
+  --alert-success-bg: #c6f6d5;
+  --alert-success-color: #22543d;
+  --alert-success-border: #9ae6b4;
+  --row-bg: #ffffff;
+  --row-hover-bg: #edf2f7;
+  --panel-hover-border: var(--accent-primary);
+  --sortable-header-hover-bg: #e6fffa;
+
+  /* Dependency variables */
+  --dependency-active-bg: #fff5f5;
+  --dependency-active-border: #feb2b2;
+  --dependency-active-hover-bg: #fed7d7;
+  --dependency-active-hover-border: #fc8181;
+  --dependency-blocks-bg: #ebf8ff;
+  --dependency-blocks-border: #bee3f8;
+  --dependency-blocks-hover-bg: #dee2e6;
+  --dependency-blocks-hover-border: #90cdf4;
+  --color-info: #2b6cb0;
+  --color-info-light: #2b6cb0;
 }
 
 body {
@@ -68,13 +298,17 @@ h6 {
 
 .card-panel:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 40px 0 #000000;
-  border-color: #3a5a5a;
+  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.45);
+  border-color: var(--panel-hover-border);
 }
 
 /* Premium Button */
 .btn-primary {
-  background: linear-gradient(135deg, var(--accent-primary), #66fcf1);
+  background: linear-gradient(
+    135deg,
+    var(--accent-primary),
+    var(--accent-secondary)
+  );
   color: var(--bg-primary);
   border: none;
   padding: 0.75rem 1.5rem;
@@ -84,12 +318,12 @@ h6 {
   font-size: 1rem;
   cursor: pointer;
   transition: all var(--transition-fast);
-  box-shadow: 0 4px 15px #66fcf1;
+  box-shadow: 0 4px 15px var(--accent-secondary);
 }
 
 .btn-primary:hover {
   transform: translateY(-1px) scale(1.02);
-  box-shadow: 0 6px 20px #66fcf1;
+  box-shadow: 0 6px 20px var(--accent-secondary);
 }
 
 .btn-primary:active {
@@ -98,7 +332,7 @@ h6 {
 
 /* Premium Inputs */
 .input-field {
-  background: #0b0c10;
+  background: var(--bg-primary);
   border: 1px solid var(--border-color);
   color: var(--text-primary);
   padding: 0.75rem 1rem;
@@ -115,7 +349,7 @@ h6 {
 .input-field:focus {
   outline: none;
   border-color: var(--accent-secondary);
-  box-shadow: 0 0 0 3px #66fcf1;
+  box-shadow: 0 0 0 3px var(--accent-secondary);
 }
 
 /* Animations */
@@ -145,7 +379,7 @@ h6 {
 }
 
 .sortable-header:hover {
-  background-color: #1a2a2a;
+  background-color: var(--sortable-header-hover-bg);
   color: var(--accent-secondary);
 }
 

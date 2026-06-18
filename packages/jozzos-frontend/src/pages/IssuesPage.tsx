@@ -1143,7 +1143,7 @@ export const IssuesPage: React.FC = () => {
               <tr
                 style={{
                   borderBottom: "1px solid var(--border-color)",
-                  background: "#151b24",
+                  background: "var(--blocker-row-bg)",
                   opacity: isStatusClosed(blocker.status) ? 0.45 : 1,
                   transition: "opacity var(--transition-fast)",
                 }}
@@ -1190,7 +1190,8 @@ export const IssuesPage: React.FC = () => {
                           borderRadius: "4px",
                         }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.background = "#2a4a4a";
+                          e.currentTarget.style.background =
+                            "var(--btn-secondary-hover-bg)";
                           e.currentTarget.style.color = "var(--text-primary)";
                         }}
                         onMouseLeave={(e) => {
@@ -1341,7 +1342,7 @@ export const IssuesPage: React.FC = () => {
                                   padding: "2px 6px",
                                   margin: 0,
                                   fontSize: "0.85rem",
-                                  background: "#0b0c10",
+                                  background: "var(--bg-primary)",
                                   border: "1px solid var(--accent-secondary)",
                                 }}
                                 value={editValue}
@@ -1374,7 +1375,7 @@ export const IssuesPage: React.FC = () => {
                                     display: "inline-block",
                                     width: "12px",
                                     height: "12px",
-                                    border: "1px solid #4a4f58",
+                                    border: "1px solid var(--border-color)",
                                     borderTop:
                                       "1px solid var(--accent-secondary)",
                                     borderRadius: "50%",
@@ -1434,7 +1435,7 @@ export const IssuesPage: React.FC = () => {
                                 style={{
                                   width: "12px",
                                   height: "12px",
-                                  border: "1px solid #4a4f58",
+                                  border: "1px solid var(--border-color)",
                                   borderTop:
                                     "1px solid var(--accent-secondary)",
                                   borderRadius: "50%",
@@ -1510,11 +1511,11 @@ export const IssuesPage: React.FC = () => {
                               title="Double-click to change status"
                               style={{
                                 background: isStatusClosed(blocker.status)
-                                  ? "#2a2f38"
-                                  : "#3a1a1a",
+                                  ? "var(--status-closed-bg)"
+                                  : "var(--status-active-bg)",
                                 color: isStatusClosed(blocker.status)
-                                  ? "var(--text-secondary)"
-                                  : "#ff8787",
+                                  ? "var(--status-closed-color)"
+                                  : "var(--status-active-color)",
                                 padding: "0.05rem 0.4rem",
                                 borderRadius: "4px",
                                 fontSize: "0.7rem",
@@ -1531,7 +1532,7 @@ export const IssuesPage: React.FC = () => {
                                   style={{
                                     width: "12px",
                                     height: "12px",
-                                    border: "1px solid #4a4f58",
+                                    border: "1px solid var(--border-color)",
                                     borderTop:
                                       "1px solid var(--accent-secondary)",
                                     borderRadius: "50%",
@@ -1580,7 +1581,7 @@ export const IssuesPage: React.FC = () => {
                                 padding: "2px 6px",
                                 margin: 0,
                                 fontSize: "0.85rem",
-                                background: "#0b0c10",
+                                background: "var(--bg-primary)",
                                 border: "1px solid var(--accent-secondary)",
                               }}
                               placeholder="Name/Email or -"
@@ -1613,7 +1614,7 @@ export const IssuesPage: React.FC = () => {
                                 style={{
                                   width: "12px",
                                   height: "12px",
-                                  border: "1px solid #4a4f58",
+                                  border: "1px solid var(--border-color)",
                                   borderTop:
                                     "1px solid var(--accent-secondary)",
                                   borderRadius: "50%",
@@ -1642,7 +1643,7 @@ export const IssuesPage: React.FC = () => {
                                   style={{
                                     width: "12px",
                                     height: "12px",
-                                    border: "1px solid #4a4f58",
+                                    border: "1px solid var(--border-color)",
                                     borderTop:
                                       "1px solid var(--accent-secondary)",
                                     borderRadius: "50%",
@@ -1691,7 +1692,7 @@ export const IssuesPage: React.FC = () => {
                                 padding: "2px 6px",
                                 margin: 0,
                                 fontSize: "0.85rem",
-                                background: "#0b0c10",
+                                background: "var(--bg-primary)",
                                 border: "1px solid var(--accent-secondary)",
                               }}
                               placeholder="Name/Email or -"
@@ -1724,7 +1725,7 @@ export const IssuesPage: React.FC = () => {
                                 style={{
                                   width: "12px",
                                   height: "12px",
-                                  border: "1px solid #4a4f58",
+                                  border: "1px solid var(--border-color)",
                                   borderTop:
                                     "1px solid var(--accent-secondary)",
                                   borderRadius: "50%",
@@ -1753,7 +1754,7 @@ export const IssuesPage: React.FC = () => {
                                   style={{
                                     width: "12px",
                                     height: "12px",
-                                    border: "1px solid #4a4f58",
+                                    border: "1px solid var(--border-color)",
                                     borderTop:
                                       "1px solid var(--accent-secondary)",
                                     borderRadius: "50%",
@@ -1826,14 +1827,18 @@ export const IssuesPage: React.FC = () => {
                         transition: "all 0.2s ease",
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.background = "#2a4a4a";
+                        e.currentTarget.style.background =
+                          "var(--btn-secondary-hover-bg)";
                         e.currentTarget.style.borderColor =
                           "var(--accent-secondary)";
-                        e.currentTarget.style.boxShadow = "0 0 10px #66fcf1";
+                        e.currentTarget.style.boxShadow =
+                          "0 0 10px var(--btn-secondary-hover-shadow)";
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.background = "#2a2f38";
-                        e.currentTarget.style.borderColor = "#3a3f48";
+                        e.currentTarget.style.background =
+                          "var(--btn-secondary-bg)";
+                        e.currentTarget.style.borderColor =
+                          "var(--btn-secondary-border)";
                         e.currentTarget.style.boxShadow = "none";
                       }}
                     >
@@ -1858,7 +1863,7 @@ export const IssuesPage: React.FC = () => {
                       style={{
                         background: "#2a2f38",
                         border: "1px solid #3a3f48",
-                        color: "#ff6b6b",
+                        color: "var(--color-error)",
                         cursor: "pointer",
                         padding: "6px",
                         display: "inline-flex",
@@ -1868,13 +1873,18 @@ export const IssuesPage: React.FC = () => {
                         transition: "all 0.2s ease",
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.background = "#3a1a1a";
-                        e.currentTarget.style.borderColor = "#ff6b6b";
-                        e.currentTarget.style.boxShadow = "0 0 10px #ff6b6b";
+                        e.currentTarget.style.background =
+                          "var(--btn-danger-hover-bg)";
+                        e.currentTarget.style.borderColor =
+                          "var(--color-error)";
+                        e.currentTarget.style.boxShadow =
+                          "0 0 10px var(--color-error)";
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.background = "#2a2f38";
-                        e.currentTarget.style.borderColor = "#3a3f48";
+                        e.currentTarget.style.background =
+                          "var(--btn-secondary-bg)";
+                        e.currentTarget.style.borderColor =
+                          "var(--btn-secondary-border)";
                         e.currentTarget.style.boxShadow = "none";
                       }}
                     >
@@ -2045,12 +2055,13 @@ export const IssuesPage: React.FC = () => {
             }}
             onClick={() => copyTableAsRichText()}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = "#2a4a4a";
+              e.currentTarget.style.background =
+                "var(--btn-secondary-hover-bg)";
               e.currentTarget.style.borderColor = "var(--accent-secondary)";
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = "#2a2f38";
-              e.currentTarget.style.borderColor = "#3a3f48";
+              e.currentTarget.style.background = "var(--btn-secondary-bg)";
+              e.currentTarget.style.borderColor = "var(--btn-secondary-border)";
             }}
           >
             <svg
@@ -2092,12 +2103,13 @@ export const IssuesPage: React.FC = () => {
             }}
             onClick={() => setIsConfigOpen(true)}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = "#2a4a4a";
+              e.currentTarget.style.background =
+                "var(--btn-secondary-hover-bg)";
               e.currentTarget.style.borderColor = "var(--accent-secondary)";
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = "#2a2f38";
-              e.currentTarget.style.borderColor = "#3a3f48";
+              e.currentTarget.style.background = "var(--btn-secondary-bg)";
+              e.currentTarget.style.borderColor = "var(--btn-secondary-border)";
             }}
           >
             <svg
@@ -2170,7 +2182,7 @@ export const IssuesPage: React.FC = () => {
                 e.currentTarget.style.color = "var(--text-primary)";
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = "#2a2f38";
+                e.currentTarget.style.background = "var(--btn-secondary-bg)";
                 e.currentTarget.style.color = "var(--text-secondary)";
               }}
             >
@@ -2185,7 +2197,7 @@ export const IssuesPage: React.FC = () => {
           style={{
             padding: "0.75rem 1rem",
             background: "#3a1a1a",
-            color: "#ff8787",
+            color: "var(--status-active-color)",
             border: "1px solid #5a2a2a",
             borderRadius: "6px",
             fontSize: "0.9rem",
@@ -2355,16 +2367,17 @@ export const IssuesPage: React.FC = () => {
                     <tr
                       style={{
                         borderBottom: "1px solid var(--border-color)",
-                        background: "#0f1219",
+                        background: "var(--row-bg)",
                         opacity: isStatusClosed(issue.status) ? 0.45 : 1,
                         transition:
                           "background var(--transition-fast), opacity var(--transition-fast)",
                       }}
                       onMouseEnter={(e) =>
-                        (e.currentTarget.style.background = "#1a1f2a")
+                        (e.currentTarget.style.background =
+                          "var(--row-hover-bg)")
                       }
                       onMouseLeave={(e) =>
-                        (e.currentTarget.style.background = "#0f1219")
+                        (e.currentTarget.style.background = "var(--row-bg)")
                       }
                     >
                       {/* 1. Prefix Chevron Cell */}
@@ -2404,7 +2417,8 @@ export const IssuesPage: React.FC = () => {
                                 borderRadius: "4px",
                               }}
                               onMouseEnter={(e) => {
-                                e.currentTarget.style.background = "#2a4a4a";
+                                e.currentTarget.style.background =
+                                  "var(--btn-secondary-hover-bg)";
                                 e.currentTarget.style.color =
                                   "var(--text-primary)";
                               }}
@@ -2476,7 +2490,7 @@ export const IssuesPage: React.FC = () => {
                                         .map((b) => b.key)
                                         .join(", ")}`}
                                       style={{
-                                        color: "#ff6b6b",
+                                        color: "var(--color-error)",
                                         display: "inline-flex",
                                         alignItems: "center",
                                       }}
@@ -2587,7 +2601,8 @@ export const IssuesPage: React.FC = () => {
                                           display: "inline-block",
                                           width: "12px",
                                           height: "12px",
-                                          border: "1px solid #4a4f58",
+                                          border:
+                                            "1px solid var(--border-color)",
                                           borderTop:
                                             "1px solid var(--accent-secondary)",
                                           borderRadius: "50%",
@@ -2665,7 +2680,8 @@ export const IssuesPage: React.FC = () => {
                                                 "rgba(255, 107, 107, 0.12)",
                                               border:
                                                 "1px solid rgba(255, 107, 107, 0.25)",
-                                              color: "#ff8787",
+                                              color:
+                                                "var(--status-active-color)",
                                               padding: "0.1rem 0.4rem",
                                               borderRadius: "4px",
                                               fontSize: "0.7rem",
@@ -2911,10 +2927,10 @@ export const IssuesPage: React.FC = () => {
                                     title="Double-click to change status"
                                     style={{
                                       background: isStatusClosed(issue.status)
-                                        ? "rgba(255, 255, 255, 0.1)"
+                                        ? "var(--status-closed-bg)"
                                         : "var(--accent-primary)",
                                       color: isStatusClosed(issue.status)
-                                        ? "var(--text-secondary)"
+                                        ? "var(--status-closed-color)"
                                         : "var(--bg-primary)",
                                       padding: "0.1rem 0.5rem",
                                       borderRadius: "4px",
@@ -2983,7 +2999,7 @@ export const IssuesPage: React.FC = () => {
                                       padding: "2px 6px",
                                       margin: 0,
                                       fontSize: "0.85rem",
-                                      background: "rgba(0, 0, 0, 0.5)",
+                                      background: "var(--bg-primary)",
                                       border:
                                         "1px solid var(--accent-secondary)",
                                     }}
@@ -3099,7 +3115,7 @@ export const IssuesPage: React.FC = () => {
                                       padding: "2px 6px",
                                       margin: 0,
                                       fontSize: "0.85rem",
-                                      background: "rgba(0, 0, 0, 0.5)",
+                                      background: "var(--bg-primary)",
                                       border:
                                         "1px solid var(--accent-secondary)",
                                     }}
@@ -3228,8 +3244,8 @@ export const IssuesPage: React.FC = () => {
                             aria-label="View issue details"
                             title="View details"
                             style={{
-                              background: "rgba(255, 255, 255, 0.05)",
-                              border: "1px solid rgba(255, 255, 255, 0.1)",
+                              background: "var(--btn-secondary-bg)",
+                              border: "1px solid var(--btn-secondary-border)",
                               color: "var(--accent-secondary)",
                               cursor: "pointer",
                               padding: "6px",
@@ -3274,9 +3290,9 @@ export const IssuesPage: React.FC = () => {
                             aria-label="Add blocker issue"
                             title="Add blocker"
                             style={{
-                              background: "rgba(255, 255, 255, 0.05)",
-                              border: "1px solid rgba(255, 255, 255, 0.1)",
-                              color: "#ff6b6b",
+                              background: "var(--btn-secondary-bg)",
+                              border: "1px solid var(--btn-secondary-border)",
+                              color: "var(--color-error)",
                               cursor: "pointer",
                               padding: "6px",
                               display: "inline-flex",
@@ -3288,7 +3304,8 @@ export const IssuesPage: React.FC = () => {
                             onMouseEnter={(e) => {
                               e.currentTarget.style.background =
                                 "rgba(255, 107, 107, 0.15)";
-                              e.currentTarget.style.borderColor = "#ff6b6b";
+                              e.currentTarget.style.borderColor =
+                                "var(--color-error)";
                               e.currentTarget.style.boxShadow =
                                 "0 0 10px rgba(255, 107, 107, 0.3)";
                             }}
@@ -3328,8 +3345,8 @@ export const IssuesPage: React.FC = () => {
                             aria-label="Copy issue with blockers"
                             title="Copy issue with blockers"
                             style={{
-                              background: "rgba(255, 255, 255, 0.05)",
-                              border: "1px solid rgba(255, 255, 255, 0.1)",
+                              background: "var(--btn-secondary-bg)",
+                              border: "1px solid var(--btn-secondary-border)",
                               color: "#ffd700",
                               cursor: "pointer",
                               padding: "6px",
@@ -3475,14 +3492,14 @@ export const IssuesPage: React.FC = () => {
                 >
                   <span
                     style={{
-                      background: "rgba(102, 252, 241, 0.15)",
+                      background: "var(--tutorial-bg)",
                       color: "var(--accent-secondary)",
                       padding: "0.2rem 0.6rem",
                       borderRadius: "4px",
                       fontSize: "0.8rem",
                       fontWeight: "600",
                       letterSpacing: "0.05em",
-                      border: "1px solid rgba(102, 252, 241, 0.3)",
+                      border: "1px solid var(--tutorial-border)",
                     }}
                   >
                     {selectedIssue.key}
@@ -3540,8 +3557,8 @@ export const IssuesPage: React.FC = () => {
                     alignItems: "center",
                     gap: "0.5rem",
                     cursor: "pointer",
-                    background: "rgba(255, 255, 255, 0.05)",
-                    border: "1px solid rgba(255, 255, 255, 0.15)",
+                    background: "var(--btn-secondary-bg)",
+                    border: "1px solid var(--btn-secondary-border)",
                     borderRadius: "6px",
                     color: "var(--text-primary)",
                     transition: "all var(--transition-fast)",
@@ -3554,15 +3571,15 @@ export const IssuesPage: React.FC = () => {
                   onClick={() => copyIssueWithBlockers(selectedIssue)}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background =
-                      "rgba(102, 252, 241, 0.1)";
+                      "var(--btn-secondary-hover-bg)";
                     e.currentTarget.style.borderColor =
                       "var(--accent-secondary)";
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.background =
-                      "rgba(255, 255, 255, 0.05)";
+                      "var(--btn-secondary-bg)";
                     e.currentTarget.style.borderColor =
-                      "rgba(255, 255, 255, 0.15)";
+                      "var(--btn-secondary-border)";
                   }}
                 >
                   <svg
@@ -3601,7 +3618,8 @@ export const IssuesPage: React.FC = () => {
                   transition: "all var(--transition-fast)",
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "rgba(255, 255, 255, 0.1)";
+                  e.currentTarget.style.background =
+                    "var(--btn-secondary-hover-bg)";
                   e.currentTarget.style.color = "var(--text-primary)";
                   e.currentTarget.style.transform = "rotate(90deg)";
                 }}
@@ -3660,7 +3678,7 @@ export const IssuesPage: React.FC = () => {
                         border: "1px solid rgba(255, 107, 107, 0.25)",
                         borderRadius: "8px",
                         padding: "0.75rem 1rem",
-                        color: "#ff8787",
+                        color: "var(--status-active-color)",
                       }}
                     >
                       <svg
@@ -3696,7 +3714,7 @@ export const IssuesPage: React.FC = () => {
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 style={{
-                                  color: "#ff6b6b",
+                                  color: "var(--color-error)",
                                   fontWeight: "600",
                                   textDecoration: "none",
                                   borderBottom:
@@ -3751,7 +3769,7 @@ export const IssuesPage: React.FC = () => {
                           style={{
                             fontSize: "0.8rem",
                             fontWeight: "600",
-                            color: "#ff6b6b",
+                            color: "var(--color-error)",
                             marginBottom: "0.75rem",
                             display: "flex",
                             alignItems: "center",
@@ -3802,9 +3820,9 @@ export const IssuesPage: React.FC = () => {
                                 <div
                                   key={dep.id}
                                   style={{
-                                    background: "rgba(255, 107, 107, 0.03)",
+                                    background: "var(--dependency-active-bg)",
                                     border:
-                                      "1px solid rgba(255, 107, 107, 0.15)",
+                                      "1px solid var(--dependency-active-border)",
                                     borderRadius: "8px",
                                     padding: "0.75rem",
                                     display: "flex",
@@ -3816,15 +3834,15 @@ export const IssuesPage: React.FC = () => {
                                   }}
                                   onMouseEnter={(e) => {
                                     e.currentTarget.style.background =
-                                      "rgba(255, 107, 107, 0.08)";
+                                      "var(--dependency-active-hover-bg)";
                                     e.currentTarget.style.borderColor =
-                                      "rgba(255, 107, 107, 0.3)";
+                                      "var(--dependency-active-hover-border)";
                                   }}
                                   onMouseLeave={(e) => {
                                     e.currentTarget.style.background =
-                                      "rgba(255, 107, 107, 0.03)";
+                                      "var(--dependency-active-bg)";
                                     e.currentTarget.style.borderColor =
-                                      "rgba(255, 107, 107, 0.15)";
+                                      "var(--dependency-active-border)";
                                   }}
                                 >
                                   <div
@@ -3841,7 +3859,7 @@ export const IssuesPage: React.FC = () => {
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       style={{
-                                        color: "#ff6b6b",
+                                        color: "var(--color-error)",
                                         textDecoration: "none",
                                         fontSize: "0.85rem",
                                         fontWeight: "600",
@@ -3865,7 +3883,7 @@ export const IssuesPage: React.FC = () => {
                                   <span
                                     style={{
                                       background: "rgba(255, 107, 107, 0.15)",
-                                      color: "#ff8787",
+                                      color: "var(--status-active-color)",
                                       padding: "0.15rem 0.45rem",
                                       borderRadius: "4px",
                                       fontSize: "0.7rem",
@@ -3898,7 +3916,7 @@ export const IssuesPage: React.FC = () => {
                           style={{
                             fontSize: "0.8rem",
                             fontWeight: "600",
-                            color: "#4dabf7",
+                            color: "var(--color-info)",
                             marginBottom: "0.75rem",
                             display: "flex",
                             alignItems: "center",
@@ -3941,8 +3959,9 @@ export const IssuesPage: React.FC = () => {
                               <div
                                 key={dep.id}
                                 style={{
-                                  background: "rgba(77, 171, 247, 0.03)",
-                                  border: "1px solid rgba(77, 171, 247, 0.15)",
+                                  background: "var(--dependency-blocks-bg)",
+                                  border:
+                                    "1px solid var(--dependency-blocks-border)",
                                   borderRadius: "8px",
                                   padding: "0.75rem",
                                   display: "flex",
@@ -3954,15 +3973,15 @@ export const IssuesPage: React.FC = () => {
                                 }}
                                 onMouseEnter={(e) => {
                                   e.currentTarget.style.background =
-                                    "rgba(77, 171, 247, 0.08)";
+                                    "var(--dependency-blocks-hover-bg)";
                                   e.currentTarget.style.borderColor =
-                                    "rgba(77, 171, 247, 0.3)";
+                                    "var(--dependency-blocks-hover-border)";
                                 }}
                                 onMouseLeave={(e) => {
                                   e.currentTarget.style.background =
-                                    "rgba(77, 171, 247, 0.03)";
+                                    "var(--dependency-blocks-bg)";
                                   e.currentTarget.style.borderColor =
-                                    "rgba(77, 171, 247, 0.15)";
+                                    "var(--dependency-blocks-border)";
                                 }}
                               >
                                 <div
@@ -3979,7 +3998,7 @@ export const IssuesPage: React.FC = () => {
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     style={{
-                                      color: "#4dabf7",
+                                      color: "var(--color-info)",
                                       textDecoration: "none",
                                       fontSize: "0.85rem",
                                       fontWeight: "600",
@@ -4002,8 +4021,9 @@ export const IssuesPage: React.FC = () => {
                                 </div>
                                 <span
                                   style={{
-                                    background: "rgba(77, 171, 247, 0.15)",
-                                    color: "#a5d8ff",
+                                    background:
+                                      "var(--dependency-blocks-hover-bg)",
+                                    color: "var(--color-info-light)",
                                     padding: "0.15rem 0.45rem",
                                     borderRadius: "4px",
                                     fontSize: "0.7rem",
@@ -4364,7 +4384,7 @@ export const IssuesPage: React.FC = () => {
                   margin: 0,
                   fontSize: "1.1rem",
                   fontWeight: "600",
-                  color: "#ff8787",
+                  color: "var(--status-active-color)",
                   display: "flex",
                   alignItems: "center",
                   gap: "0.5rem",
@@ -4480,7 +4500,7 @@ export const IssuesPage: React.FC = () => {
                   style={{
                     padding: "0.75rem 1rem",
                     background: "rgba(255, 99, 71, 0.15)",
-                    color: "#ff8787",
+                    color: "var(--status-active-color)",
                     border: "1px solid rgba(255, 99, 71, 0.3)",
                     borderRadius: "6px",
                     fontSize: "0.85rem",
@@ -4544,7 +4564,7 @@ export const IssuesPage: React.FC = () => {
                     padding: "0.5rem 1.25rem",
                     fontSize: "0.85rem",
                     fontWeight: "600",
-                    color: "#ff8787",
+                    color: "var(--status-active-color)",
                     cursor: "pointer",
                     display: "inline-flex",
                     alignItems: "center",
@@ -4555,7 +4575,7 @@ export const IssuesPage: React.FC = () => {
                     if (!addingBlockerLoading && blockerKeyInput.trim()) {
                       e.currentTarget.style.background =
                         "rgba(255, 107, 107, 0.3)";
-                      e.currentTarget.style.borderColor = "#ff6b6b";
+                      e.currentTarget.style.borderColor = "var(--color-error)";
                       e.currentTarget.style.boxShadow =
                         "0 0 10px rgba(255, 107, 107, 0.2)";
                     }
@@ -5179,7 +5199,7 @@ export const IssuesPage: React.FC = () => {
                 style={{
                   background: "transparent",
                   border: "none",
-                  color: "#ff6b6b",
+                  color: "var(--color-error)",
                   cursor: "pointer",
                   fontSize: "0.8rem",
                   fontWeight: "500",
