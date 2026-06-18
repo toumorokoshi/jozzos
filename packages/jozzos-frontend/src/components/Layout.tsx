@@ -241,7 +241,6 @@ export const Layout: React.FC = () => {
               gap: "0.75rem",
               alignItems: "center",
               flex: 1,
-              maxWidth: "600px",
               marginLeft: "1.5rem",
             }}
           >
