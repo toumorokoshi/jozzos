@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import {
   getIssuesByFilter,
   updateIssueFields,
@@ -106,6 +106,8 @@ const isStatusClosed = (statusName: string | undefined): boolean => {
 export const IssuesPage: React.FC = () => {
   const { apiKey, userEmail, jiraDomain } = useConfig();
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const [dismissedTokenAlert, setDismissedTokenAlert] = useState(false);
   const queryParam = searchParams.get("q") || "";
   const [filterId, setFilterId] = useState(queryParam);
   const [prevQueryParam, setPrevQueryParam] = useState(queryParam);
@@ -5301,6 +5303,126 @@ export const IssuesPage: React.FC = () => {
                 }
               >
                 Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* API Token Not Specified Dialog */}
+      {!apiKey && !dismissedTokenAlert && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            backgroundColor: "var(--bg-primary)",
+            zIndex: 2000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "2rem",
+            boxSizing: "border-box",
+            animation: "modalFadeIn 0.3s ease-out forwards",
+          }}
+        >
+          <div
+            className="card-panel"
+            style={{
+              background: "var(--bg-secondary)",
+              border: "1px solid var(--border-color)",
+              borderRadius: "16px",
+              boxShadow: "0 20px 50px rgba(0, 0, 0, 0.6)",
+              width: "100%",
+              maxWidth: "500px",
+              padding: "2rem",
+              display: "flex",
+              flexDirection: "column",
+              gap: "1.5rem",
+              boxSizing: "border-box",
+            }}
+          >
+            <h3
+              style={{
+                margin: 0,
+                color: "var(--accent-secondary)",
+                fontSize: "1.3rem",
+                fontWeight: "600",
+              }}
+            >
+              Jira API Token Required
+            </h3>
+            <p
+              style={{
+                margin: 0,
+                color: "var(--text-secondary)",
+                fontSize: "0.95rem",
+                lineHeight: "1.5",
+              }}
+            >
+              Jozzos requires a Jira API token to connect, search issues, and
+              build blocker hierarchies. Please configure your API key and
+              domain in Settings to get started.
+            </p>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "1rem",
+                marginTop: "0.5rem",
+              }}
+            >
+              <button
+                onClick={() => setDismissedTokenAlert(true)}
+                style={{
+                  padding: "0.6rem 1.25rem",
+                  background: "transparent",
+                  border: "1px solid var(--border-color)",
+                  borderRadius: "8px",
+                  color: "var(--text-secondary)",
+                  cursor: "pointer",
+                  fontSize: "0.85rem",
+                  fontWeight: "600",
+                  transition: "all var(--transition-fast)",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = "var(--text-primary)";
+                  e.currentTarget.style.color = "var(--text-primary)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = "var(--border-color)";
+                  e.currentTarget.style.color = "var(--text-secondary)";
+                }}
+              >
+                Dismiss
+              </button>
+              <button
+                onClick={() => navigate("/settings")}
+                style={{
+                  padding: "0.6rem 1.5rem",
+                  background: "var(--accent-primary)",
+                  border: "none",
+                  borderRadius: "8px",
+                  color: "var(--bg-primary)",
+                  cursor: "pointer",
+                  fontSize: "0.85rem",
+                  fontWeight: "600",
+                  boxShadow: "0 0 10px rgba(102, 252, 241, 0.2)",
+                  transition: "all var(--transition-fast)",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "scale(1.02)";
+                  e.currentTarget.style.boxShadow =
+                    "0 0 15px rgba(102, 252, 241, 0.4)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "scale(1)";
+                  e.currentTarget.style.boxShadow =
+                    "0 0 10px rgba(102, 252, 241, 0.2)";
+                }}
+              >
+                Go to Settings
               </button>
             </div>
           </div>
