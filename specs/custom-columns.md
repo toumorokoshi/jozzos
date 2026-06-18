@@ -87,7 +87,7 @@ interface ColumnConfig {
 
 We will implement a premium slide-out side panel (flyout drawer) from the right:
 
-- Built with a sleek glassmorphic overlay and smooth transitions.
+- Built with a sleek overlay panel and smooth transitions.
 - Displays:
   - **Active Columns**: Vertical list with "Move Up", "Move Down", and "Remove" (X) buttons.
   - **Available Columns**: List of fields returned by Jira (filtered by a search input, excluding fields already active). Clicking "+" adds them to active.

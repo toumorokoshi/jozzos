@@ -12,10 +12,10 @@
   --accent-secondary: #66fcf1;
 
   /* UI Elements */
-  --border-color: rgba(255, 255, 255, 0.08);
-  --glass-bg: rgba(31, 40, 51, 0.4);
-  --glass-border: rgba(102, 252, 241, 0.1);
-  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  --border-color: #2a2f38;
+  --panel-bg: #1f2833;
+  --panel-border: #2a3a3a;
+  --panel-shadow: 0 8px 32px 0 #000000;
 
   /* Typography */
   --font-family: "Outfit", system-ui, -apple-system, sans-serif;
@@ -29,17 +29,6 @@ body {
   margin: 0;
   padding: 0;
   background-color: var(--bg-primary);
-  background-image:
-    radial-gradient(
-      circle at 15% 50%,
-      rgba(69, 162, 158, 0.05),
-      transparent 25%
-    ),
-    radial-gradient(
-      circle at 85% 30%,
-      rgba(102, 252, 241, 0.05),
-      transparent 25%
-    );
   color: var(--text-primary);
   font-family: var(--font-family);
   min-height: 100vh;
@@ -65,33 +54,27 @@ h6 {
   margin: 0;
 }
 
-/* Glassmorphism Panel Utilities */
-.glass-panel {
-  background: var(--glass-bg);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--glass-border);
+/* Card Panel Utilities */
+.card-panel {
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
   border-radius: 16px;
-  box-shadow: var(--glass-shadow);
+  box-shadow: var(--panel-shadow);
   padding: 2rem;
   transition:
     transform var(--transition-normal),
     box-shadow var(--transition-normal);
 }
 
-.glass-panel:hover {
+.card-panel:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.45);
-  border-color: rgba(102, 252, 241, 0.2);
+  box-shadow: 0 12px 40px 0 #000000;
+  border-color: #3a5a5a;
 }
 
 /* Premium Button */
 .btn-primary {
-  background: linear-gradient(
-    135deg,
-    var(--accent-primary),
-    rgba(102, 252, 241, 0.8)
-  );
+  background: linear-gradient(135deg, var(--accent-primary), #66fcf1);
   color: var(--bg-primary);
   border: none;
   padding: 0.75rem 1.5rem;
@@ -101,12 +84,12 @@ h6 {
   font-size: 1rem;
   cursor: pointer;
   transition: all var(--transition-fast);
-  box-shadow: 0 4px 15px rgba(102, 252, 241, 0.2);
+  box-shadow: 0 4px 15px #66fcf1;
 }
 
 .btn-primary:hover {
   transform: translateY(-1px) scale(1.02);
-  box-shadow: 0 6px 20px rgba(102, 252, 241, 0.3);
+  box-shadow: 0 6px 20px #66fcf1;
 }
 
 .btn-primary:active {
@@ -115,7 +98,7 @@ h6 {
 
 /* Premium Inputs */
 .input-field {
-  background: rgba(11, 12, 16, 0.6);
+  background: #0b0c10;
   border: 1px solid var(--border-color);
   color: var(--text-primary);
   padding: 0.75rem 1rem;
@@ -132,7 +115,7 @@ h6 {
 .input-field:focus {
   outline: none;
   border-color: var(--accent-secondary);
-  box-shadow: 0 0 0 3px rgba(102, 252, 241, 0.1);
+  box-shadow: 0 0 0 3px #66fcf1;
 }
 
 /* Animations */
@@ -141,6 +124,7 @@ h6 {
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -161,7 +145,7 @@ h6 {
 }
 
 .sortable-header:hover {
-  background-color: rgba(102, 252, 241, 0.06);
+  background-color: #1a2a2a;
   color: var(--accent-secondary);
 }
 

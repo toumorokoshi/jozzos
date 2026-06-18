@@ -8,3 +8,4 @@
    to re-use via modular utility methods.
 5. Always add unit tests.
    - If the file is a script, just add a simple test harness as a sibling, with the suffix "\_test" in the filename.
+6. We do not use transparent styling (such as glassmorphism, transparent/semi-transparent backgrounds, or backdrop filters).

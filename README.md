@@ -8,7 +8,7 @@ Jozzos is a UI for issue management systems, designed for superusers who want:
 
 - **Platform Agnostic Architecture**: Core services are designed to decouple the specific tracker from the UI models.
 - **Local Priority**: Render and run the UI locally, granting full control of the frontend framework.
-- **Premium Aesthetics**: Built with glassmorphism, dynamic animations, and dark-mode optimization.
+- **Premium Aesthetics**: Built with modern card-based layouts, dynamic animations, and dark-mode optimization.
 - **Jira Integration**: Natively interfaces with Jira out-of-the-box using the `/rest/api/3/search` endpoint.
 
 ## Getting Started

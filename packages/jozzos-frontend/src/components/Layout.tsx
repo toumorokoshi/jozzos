@@ -101,7 +101,7 @@ export const Layout: React.FC = () => {
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0,0,0,0.5)",
+            background: "#000000",
             zIndex: 40,
           }}
         />
@@ -157,8 +157,8 @@ export const Layout: React.FC = () => {
               type="button"
               onClick={() => setShowHelpModal(true)}
               style={{
-                background: "rgba(255, 255, 255, 0.05)",
-                border: "1px solid rgba(255, 255, 255, 0.15)",
+                background: "#2a2f38",
+                border: "1px solid #3a3f48",
                 borderRadius: "50%",
                 width: "20px",
                 height: "20px",
@@ -176,14 +176,13 @@ export const Layout: React.FC = () => {
               }}
               title="what is Jozzos and how do I use it?"
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = "rgba(102, 252, 241, 0.15)";
+                e.currentTarget.style.background = "#2a4a4a";
                 e.currentTarget.style.borderColor = "var(--accent-secondary)";
-                e.currentTarget.style.boxShadow =
-                  "0 0 8px rgba(102, 252, 241, 0.4)";
+                e.currentTarget.style.boxShadow = "0 0 8px #66fcf1";
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
-                e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.15)";
+                e.currentTarget.style.background = "#2a2f38";
+                e.currentTarget.style.borderColor = "#3a3f48";
                 e.currentTarget.style.boxShadow = "none";
               }}
             >
@@ -205,9 +204,7 @@ export const Layout: React.FC = () => {
             left: 0,
             width: "100vw",
             height: "100vh",
-            backgroundColor: "rgba(11, 12, 16, 0.7)",
-            backdropFilter: "blur(10px)",
-            WebkitBackdropFilter: "blur(10px)",
+            backgroundColor: "#0b0c10",
             zIndex: 1000,
             display: "flex",
             alignItems: "center",
@@ -219,10 +216,10 @@ export const Layout: React.FC = () => {
         >
           <div
             style={{
-              background: "rgba(31, 40, 51, 0.95)",
-              border: "1px solid rgba(102, 252, 241, 0.15)",
+              background: "#1f2833",
+              border: "1px solid #2a3a3a",
               borderRadius: "16px",
-              boxShadow: "0 20px 50px rgba(0, 0, 0, 0.6)",
+              boxShadow: "0 20px 50px #000000",
               width: "90vw",
               maxWidth: "600px",
               display: "flex",

@@ -17,7 +17,7 @@ export const SettingsPage: React.FC = () => {
       className="animate-fade-in"
       style={{ maxWidth: "600px", margin: "0 auto" }}
     >
-      <section className="glass-panel">
+      <section className="card-panel">
         <h2>Configuration</h2>
         <p style={{ marginBottom: "1.5rem", color: "var(--text-secondary)" }}>
           Enter your API credentials to connect to your issue tracker. These
@@ -84,8 +84,8 @@ export const SettingsPage: React.FC = () => {
                 type="button"
                 onClick={() => setShowTutorial(!showTutorial)}
                 style={{
-                  background: "rgba(255, 255, 255, 0.05)",
-                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                  background: "#2a2f38",
+                  border: "1px solid #3a3f48",
                   borderRadius: "50%",
                   width: "18px",
                   height: "18px",
@@ -102,17 +102,13 @@ export const SettingsPage: React.FC = () => {
                 }}
                 title="How to generate a Jira API token"
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background =
-                    "rgba(102, 252, 241, 0.15)";
+                  e.currentTarget.style.background = "#2a4a4a";
                   e.currentTarget.style.borderColor = "var(--accent-secondary)";
-                  e.currentTarget.style.boxShadow =
-                    "0 0 8px rgba(102, 252, 241, 0.4)";
+                  e.currentTarget.style.boxShadow = "0 0 8px #66fcf1";
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background =
-                    "rgba(255, 255, 255, 0.05)";
-                  e.currentTarget.style.borderColor =
-                    "rgba(255, 255, 255, 0.15)";
+                  e.currentTarget.style.background = "#2a2f38";
+                  e.currentTarget.style.borderColor = "#3a3f48";
                   e.currentTarget.style.boxShadow = "none";
                 }}
               >
@@ -123,8 +119,8 @@ export const SettingsPage: React.FC = () => {
               <div
                 className="animate-fade-in"
                 style={{
-                  background: "rgba(102, 252, 241, 0.05)",
-                  border: "1px solid rgba(102, 252, 241, 0.2)",
+                  background: "#1a2a2a",
+                  border: "1px solid #2a4a4a",
                   borderRadius: "6px",
                   padding: "0.8rem 1rem",
                   marginBottom: "0.75rem",
