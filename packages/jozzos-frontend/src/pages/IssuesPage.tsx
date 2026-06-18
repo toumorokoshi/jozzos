@@ -197,6 +197,7 @@ export const IssuesPage: React.FC = () => {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [expandedIssues, setExpandedIssues] = useState<Set<string>>(new Set());
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
   const [addingBlockerFor, setAddingBlockerFor] = useState<Issue | null>(null);
@@ -942,9 +943,10 @@ export const IssuesPage: React.FC = () => {
         }
 
         // Update blockedBy to include nested blockers
-        if (issue.blockedBy) {
+        const blockedBy = issue.blockedBy ?? [];
+        if (blockedBy.length > 0 || nestedBlockers.length > 0) {
           // First, mark existing blockers as nested if applicable
-          issue.blockedBy = issue.blockedBy.map((blocker) => {
+          issue.blockedBy = blockedBy.map((blocker) => {
             const detailed = blockerLookup.get(blocker.key);
             if (detailed) {
               const enriched = { ...detailed };
@@ -998,6 +1000,123 @@ export const IssuesPage: React.FC = () => {
       nextParams.set("q", trimmed);
       setSearchParams(nextParams);
     }
+  };
+
+  const copyTableAsRichText = () => {
+    if (sortedIssues.length === 0) {
+      setError("No issues to copy");
+      return;
+    }
+
+    // Build the table as HTML for rich text copy
+    let htmlContent = `<!DOCTYPE html><table style="border-collapse: collapse; width: 100%;"><thead><tr><th style="border: 1px solid #666; padding: 8px; background: #333; color: #fff;">Key</th><th style="border: 1px solid #666; padding: 8px; background: #333; color: #fff;">Summary</th><th style="border: 1px solid #666; padding: 8px; background: #333; color: #fff;">Assignee</th></tr></thead><tbody>`;
+
+    sortedIssues.forEach((issue) => {
+      const key = issue.key || "";
+      const summary = issue.summary || "";
+      const assignee = issue.assignee || "-";
+
+      // Create HTML row with clickable key link
+      htmlContent += `<tr><td style="border: 1px solid #666; padding: 8px;"><a href="${issue.url}" style="color: #66bb6a; text-decoration: none;">${escapeHtml(key)}</a></td><td style="border: 1px solid #666; padding: 8px;">${escapeHtml(summary)}</td><td style="border: 1px solid #666; padding: 8px;">${escapeHtml(assignee)}</td></tr>`;
+    });
+
+    htmlContent += "</tbody></table>";
+
+    // Create a blob with the HTML content
+    const blob = new Blob([htmlContent], { type: "text/html" });
+    const data = [new ClipboardItem({ "text/html": blob })];
+
+    navigator.clipboard
+      .write(data)
+      .then(() => {
+        setError(null);
+        setSuccess("Table copied to clipboard!");
+        setTimeout(() => {
+          setSuccess(null);
+        }, 2000);
+      })
+      .catch((err) => {
+        console.error("Failed to copy table:", err);
+        setError("Failed to copy table to clipboard");
+      });
+  };
+
+  // Helper function to escape HTML entities
+  const escapeHtml = (unsafe: string): string => {
+    return unsafe
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  };
+
+  const copyIssueWithBlockers = (issue: Issue) => {
+    // Collect the main issue and all its blockers
+    const collectIssues = (currentIssue: Issue): Issue[] => {
+      const issues: Issue[] = [currentIssue];
+
+      // Add direct blockers
+      if (currentIssue.blockedBy) {
+        currentIssue.blockedBy.forEach((blocker) => {
+          issues.push(blocker);
+          // Add nested blockers
+          if (blocker.blockedBy) {
+            blocker.blockedBy.forEach((nestedBlocker) => {
+              issues.push(nestedBlocker);
+            });
+          }
+        });
+      }
+
+      // Add blocking issues (issues this issue blocks)
+      if (currentIssue.blockingIssues) {
+        currentIssue.blockingIssues.forEach((blockingIssue) => {
+          issues.push(blockingIssue);
+        });
+      }
+
+      return issues;
+    };
+
+    const allIssues = collectIssues(issue);
+
+    if (allIssues.length === 0) {
+      setError("No issues to copy");
+      return;
+    }
+
+    // Build the table as HTML for rich text copy
+    let htmlContent = `<!DOCTYPE html><table style="border-collapse: collapse; width: 100%;"><thead><tr><th style="border: 1px solid #666; padding: 8px; background: #333; color: #fff;">Key</th><th style="border: 1px solid #666; padding: 8px; background: #333; color: #fff;">Summary</th><th style="border: 1px solid #666; padding: 8px; background: #333; color: #fff;">Assignee</th></tr></thead><tbody>`;
+
+    allIssues.forEach((item) => {
+      const key = item.key || "";
+      const summary = item.summary || "";
+      const assignee = item.assignee || "-";
+
+      // Create HTML row with clickable key link
+      htmlContent += `<tr><td style="border: 1px solid #666; padding: 8px;"><a href="${item.url}" style="color: #66bb6a; text-decoration: none;">${escapeHtml(key)}</a></td><td style="border: 1px solid #666; padding: 8px;">${escapeHtml(summary)}</td><td style="border: 1px solid #666; padding: 8px;">${escapeHtml(assignee)}</td></tr>`;
+    });
+
+    htmlContent += "</tbody></table>";
+
+    // Create a blob with the HTML content
+    const blob = new Blob([htmlContent], { type: "text/html" });
+    const data = [new ClipboardItem({ "text/html": blob })];
+
+    navigator.clipboard
+      .write(data)
+      .then(() => {
+        setError(null);
+        setSuccess(`Copied ${allIssues.length} issue(s) to clipboard!`);
+        setTimeout(() => {
+          setSuccess(null);
+        }, 2000);
+      })
+      .catch((err) => {
+        console.error("Failed to copy issue:", err);
+        setError("Failed to copy issue to clipboard");
+      });
   };
 
   React.useEffect(() => {
@@ -1167,10 +1286,8 @@ export const IssuesPage: React.FC = () => {
                             ></rect>
                             <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
                           </svg>
-                          <a
-                            href={blocker.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                          <button
+                            onClick={() => setSelectedIssue(blocker)}
                             style={{
                               color: isStatusClosed(blocker.status)
                                 ? "var(--text-secondary)"
@@ -1180,10 +1297,14 @@ export const IssuesPage: React.FC = () => {
                                 : "none",
                               fontSize: "0.8rem",
                               fontWeight: "600",
+                              background: "none",
+                              border: "none",
+                              cursor: "pointer",
+                              padding: 0,
                             }}
                           >
                             {blocker.key}
-                          </a>
+                          </button>
                         </div>
                       </td>
                     );
@@ -1883,6 +2004,52 @@ export const IssuesPage: React.FC = () => {
             boxSizing: "border-box",
             margin: 0,
           }}
+          onClick={() => copyTableAsRichText()}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "rgba(102, 252, 241, 0.1)";
+            e.currentTarget.style.borderColor = "var(--accent-secondary)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
+            e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.15)";
+          }}
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M8 4v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4"></path>
+            <polyline points="16 4 12 4 12 12 16 12"></polyline>
+            <line x1="12" y1="12" x2="12" y2="20"></line>
+            <line x1="12" y1="20" x2="16" y2="20"></line>
+            <line x1="8" y1="20" x2="8" y2="12"></line>
+            <line x1="8" y1="12" x2="12" y2="12"></line>
+          </svg>
+          Copy as Table
+        </button>
+        <button
+          className="glass-panel"
+          style={{
+            padding: "0.5rem 1.25rem",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.5rem",
+            cursor: "pointer",
+            background: "rgba(255, 255, 255, 0.05)",
+            border: "1px solid rgba(255, 255, 255, 0.15)",
+            borderRadius: "6px",
+            color: "var(--text-primary)",
+            transition: "all var(--transition-fast)",
+            height: "38px",
+            boxSizing: "border-box",
+            margin: 0,
+          }}
           onClick={() => setIsConfigOpen(true)}
           onMouseEnter={(e) => {
             e.currentTarget.style.background = "rgba(102, 252, 241, 0.1)";
@@ -2131,6 +2298,21 @@ export const IssuesPage: React.FC = () => {
         </div>
       )}
 
+      {success && (
+        <div
+          style={{
+            padding: "0.75rem 1rem",
+            background: "rgba(76, 175, 80, 0.15)",
+            color: "#66bb6a",
+            border: "1px solid rgba(76, 175, 80, 0.3)",
+            borderRadius: "6px",
+            fontSize: "0.9rem",
+          }}
+        >
+          <strong>Success:</strong> {success}
+        </div>
+      )}
+
       {/* Spreadsheet View */}
       <div
         className="glass-panel"
@@ -2366,10 +2548,8 @@ export const IssuesPage: React.FC = () => {
                                   gap: "0.5rem",
                                 }}
                               >
-                                <a
-                                  href={issue.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
+                                <button
+                                  onClick={() => setSelectedIssue(issue)}
                                   style={{
                                     color: isStatusClosed(issue.status)
                                       ? "var(--text-secondary)"
@@ -2378,10 +2558,18 @@ export const IssuesPage: React.FC = () => {
                                       ? "line-through"
                                       : "none",
                                     fontWeight: "500",
+                                    background: "none",
+                                    border: "none",
+                                    cursor: "pointer",
+                                    padding: 0,
+                                    fontSize: "inherit",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "0.5rem",
                                   }}
                                 >
                                   {issue.key}
-                                </a>
+                                </button>
                                 {issue.blockedBy &&
                                   issue.blockedBy.filter(
                                     (b) => !isStatusClosed(b.status),
@@ -2570,12 +2758,11 @@ export const IssuesPage: React.FC = () => {
                                             !b.isNestedBlocker,
                                         )
                                         .map((blocker) => (
-                                          <a
+                                          <button
                                             key={blocker.id}
-                                            href={blocker.url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            onClick={(e) => e.stopPropagation()}
+                                            onClick={() =>
+                                              setSelectedIssue(blocker)
+                                            }
                                             title={`Blocked by ${blocker.key}: ${blocker.summary}`}
                                             style={{
                                               display: "inline-flex",
@@ -2593,6 +2780,7 @@ export const IssuesPage: React.FC = () => {
                                               textDecoration: "none",
                                               transition:
                                                 "all var(--transition-fast)",
+                                              cursor: "pointer",
                                             }}
                                             onMouseEnter={(e) => {
                                               e.currentTarget.style.background =
@@ -2630,7 +2818,7 @@ export const IssuesPage: React.FC = () => {
                                             <span>
                                               Blocked by {blocker.key}
                                             </span>
-                                          </a>
+                                          </button>
                                         ))}
                                     </div>
                                   )}
@@ -2654,12 +2842,11 @@ export const IssuesPage: React.FC = () => {
                                             b.isNestedBlocker,
                                         )
                                         .map((blocker) => (
-                                          <a
+                                          <button
                                             key={blocker.id}
-                                            href={blocker.url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            onClick={(e) => e.stopPropagation()}
+                                            onClick={() =>
+                                              setSelectedIssue(blocker)
+                                            }
                                             title={`Nested blocked by ${blocker.key}: ${blocker.summary}`}
                                             style={{
                                               display: "inline-flex",
@@ -2677,6 +2864,7 @@ export const IssuesPage: React.FC = () => {
                                               textDecoration: "none",
                                               transition:
                                                 "all var(--transition-fast)",
+                                              cursor: "pointer",
                                             }}
                                             onMouseEnter={(e) => {
                                               e.currentTarget.style.background =
@@ -2711,8 +2899,10 @@ export const IssuesPage: React.FC = () => {
                                               ></rect>
                                               <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
                                             </svg>
-                                            <span>Nested by {blocker.key}</span>
-                                          </a>
+                                            <span>
+                                              Upstream Blocker: {blocker.key}
+                                            </span>
+                                          </button>
                                         ))}
                                     </div>
                                   )}
@@ -3240,6 +3430,55 @@ export const IssuesPage: React.FC = () => {
                               <line x1="10" y1="17" x2="14" y2="17"></line>
                             </svg>
                           </button>
+                          <button
+                            onClick={() => copyIssueWithBlockers(issue)}
+                            aria-label="Copy issue with blockers"
+                            title="Copy issue with blockers"
+                            style={{
+                              background: "rgba(255, 255, 255, 0.05)",
+                              border: "1px solid rgba(255, 255, 255, 0.1)",
+                              color: "#ffd700",
+                              cursor: "pointer",
+                              padding: "6px",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              borderRadius: "6px",
+                              transition: "all 0.2s ease",
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background =
+                                "rgba(255, 215, 0, 0.15)";
+                              e.currentTarget.style.borderColor = "#ffd700";
+                              e.currentTarget.style.boxShadow =
+                                "0 0 10px rgba(255, 215, 0, 0.3)";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background =
+                                "rgba(255, 255, 255, 0.05)";
+                              e.currentTarget.style.borderColor =
+                                "rgba(255, 255, 255, 0.1)";
+                              e.currentTarget.style.boxShadow = "none";
+                            }}
+                          >
+                            <svg
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M8 4v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4"></path>
+                              <polyline points="16 4 12 4 12 12 16 12"></polyline>
+                              <line x1="12" y1="12" x2="12" y2="20"></line>
+                              <line x1="12" y1="20" x2="16" y2="20"></line>
+                              <line x1="8" y1="20" x2="8" y2="12"></line>
+                              <line x1="8" y1="12" x2="12" y2="12"></line>
+                            </svg>
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -3341,6 +3580,7 @@ export const IssuesPage: React.FC = () => {
                     display: "flex",
                     alignItems: "center",
                     gap: "0.75rem",
+                    flexWrap: "wrap",
                   }}
                 >
                   <span
@@ -3402,6 +3642,54 @@ export const IssuesPage: React.FC = () => {
                 >
                   {selectedIssue.summary}
                 </h2>
+                <button
+                  className="glass-panel"
+                  style={{
+                    padding: "0.4rem 1rem",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    cursor: "pointer",
+                    background: "rgba(255, 255, 255, 0.05)",
+                    border: "1px solid rgba(255, 255, 255, 0.15)",
+                    borderRadius: "6px",
+                    color: "var(--text-primary)",
+                    transition: "all var(--transition-fast)",
+                    fontSize: "0.85rem",
+                    height: "36px",
+                    boxSizing: "border-box",
+                    margin: 0,
+                    alignSelf: "flex-start",
+                  }}
+                  onClick={() => copyIssueWithBlockers(selectedIssue)}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "rgba(102, 252, 241, 0.1)";
+                    e.currentTarget.style.borderColor = "var(--accent-secondary)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
+                    e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.15)";
+                  }}
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M8 4v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4"></path>
+                    <polyline points="16 4 12 4 12 12 16 12"></polyline>
+                    <line x1="12" y1="12" x2="12" y2="20"></line>
+                    <line x1="12" y1="20" x2="16" y2="20"></line>
+                    <line x1="8" y1="20" x2="8" y2="12"></line>
+                    <line x1="8" y1="12" x2="12" y2="12"></line>
+                  </svg>
+                  Copy issue with blockers
+                </button>
               </div>
               <button
                 onClick={() => setSelectedIssue(null)}
