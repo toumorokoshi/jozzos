@@ -1,11 +1,55 @@
 import React, { useState } from "react";
-import { Outlet, NavLink } from "react-router-dom";
+import {
+  Outlet,
+  NavLink,
+  useNavigate,
+  useLocation,
+  useSearchParams,
+} from "react-router-dom";
 import { Menu, X, Settings, ListTodo } from "lucide-react";
 import { AboutJozzosContent } from "./AboutJozzosContent";
+import { useConfig } from "../context/ConfigContext";
 
 export const Layout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
+  const { searchQuery, setSearchQuery, searchLoading, jiraDomain } =
+    useConfig();
+  const [prevSearchQuery, setPrevSearchQuery] = useState(searchQuery);
+  const [filterId, setFilterId] = useState(searchQuery);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  if (searchQuery !== prevSearchQuery) {
+    setPrevSearchQuery(searchQuery);
+    setFilterId(searchQuery);
+  }
+
+  const getJiraSearchUrl = (query: string) => {
+    if (!jiraDomain || !query) return undefined;
+    const trimmed = query.trim();
+    if (!trimmed) return undefined;
+    const jql = /^\d+$/.test(trimmed) ? `filter=${trimmed}` : trimmed;
+    return `https://${jiraDomain}/issues/?jql=${encodeURIComponent(jql)}`;
+  };
+  const jiraUrl = getJiraSearchUrl(searchQuery);
+
+  const performSearch = () => {
+    const trimmed = filterId.trim();
+    setSearchQuery(trimmed);
+    if (location.pathname !== "/") {
+      navigate(`/?q=${encodeURIComponent(trimmed)}`);
+    } else {
+      const nextParams = new URLSearchParams(searchParams);
+      if (trimmed) {
+        nextParams.set("q", trimmed);
+      } else {
+        nextParams.delete("q");
+      }
+      setSearchParams(nextParams);
+    }
+  };
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", width: "100%" }}>
@@ -188,6 +232,102 @@ export const Layout: React.FC = () => {
             >
               ?
             </button>
+          </div>
+
+          {/* Issue query input and Jira link in the header next to logo */}
+          <div
+            style={{
+              display: "flex",
+              gap: "0.75rem",
+              alignItems: "center",
+              flex: 1,
+              maxWidth: "600px",
+              marginLeft: "1.5rem",
+            }}
+          >
+            <input
+              type="text"
+              className="input-field"
+              style={{
+                padding: "0.5rem 1rem",
+                flex: 1,
+                margin: 0,
+                height: "38px",
+                boxSizing: "border-box",
+              }}
+              placeholder="Enter Jira Filter ID or JQL (e.g. project = PROJ)"
+              value={filterId}
+              onChange={(e) => setFilterId(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && performSearch()}
+            />
+            <button
+              className="btn-primary"
+              style={{
+                padding: "0.5rem 1.5rem",
+                height: "38px",
+                boxSizing: "border-box",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+              onClick={performSearch}
+              disabled={searchLoading}
+            >
+              {searchLoading ? "Searching..." : "Search"}
+            </button>
+            <a
+              href={jiraUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="card-panel"
+              style={{
+                padding: "0 1.25rem",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "0.5rem",
+                cursor: jiraUrl ? "pointer" : "not-allowed",
+                background: jiraUrl ? "#2a2f38" : "#151b24",
+                border: "1px solid #3a3f48",
+                borderRadius: "6px",
+                color: jiraUrl ? "var(--text-primary)" : "#4a4f58",
+                transition: "all var(--transition-fast)",
+                height: "38px",
+                boxSizing: "border-box",
+                margin: 0,
+                textDecoration: "none",
+                fontSize: "0.85rem",
+                pointerEvents: jiraUrl ? "auto" : "none",
+              }}
+              onMouseEnter={(e) => {
+                if (jiraUrl) {
+                  e.currentTarget.style.background = "#2a4a4a";
+                  e.currentTarget.style.borderColor = "var(--accent-secondary)";
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (jiraUrl) {
+                  e.currentTarget.style.background = "#2a2f38";
+                  e.currentTarget.style.borderColor = "#3a3f48";
+                }
+              }}
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                <polyline points="15 3 21 3 21 9"></polyline>
+                <line x1="10" y1="14" x2="21" y2="3"></line>
+              </svg>
+              Jira
+            </a>
           </div>
         </header>
 

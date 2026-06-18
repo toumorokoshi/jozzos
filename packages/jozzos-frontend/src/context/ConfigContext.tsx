@@ -8,6 +8,10 @@ interface ConfigContextType {
   setUserEmail: (email: string) => void;
   jiraDomain: string;
   setJiraDomain: (domain: string) => void;
+  searchQuery: string;
+  setSearchQuery: (query: string) => void;
+  searchLoading: boolean;
+  setSearchLoading: (loading: boolean) => void;
 }
 
 const ConfigContext = createContext<ConfigContextType | undefined>(undefined);
@@ -24,6 +28,10 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({
   const [jiraDomain, setJiraDomainState] = useState(
     localStorage.getItem("jira_domain") || "",
   );
+  const [searchQuery, setSearchQueryState] = useState(
+    localStorage.getItem("jozzos_search_query") || "",
+  );
+  const [searchLoading, setSearchLoading] = useState(false);
 
   const setApiKey = (key: string) => {
     setApiKeyState(key);
@@ -40,6 +48,11 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({
     localStorage.setItem("jira_domain", domain);
   };
 
+  const setSearchQuery = (query: string) => {
+    setSearchQueryState(query);
+    localStorage.setItem("jozzos_search_query", query);
+  };
+
   return (
     <ConfigContext.Provider
       value={{
@@ -49,6 +62,10 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({
         setUserEmail,
         jiraDomain,
         setJiraDomain,
+        searchQuery,
+        setSearchQuery,
+        searchLoading,
+        setSearchLoading,
       }}
     >
       {children}

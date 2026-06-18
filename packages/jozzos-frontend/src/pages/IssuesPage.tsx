@@ -104,28 +104,20 @@ const isStatusClosed = (statusName: string | undefined): boolean => {
 };
 
 export const IssuesPage: React.FC = () => {
-  const { apiKey, userEmail, jiraDomain } = useConfig();
+  const {
+    apiKey,
+    userEmail,
+    jiraDomain,
+    searchQuery,
+    setSearchQuery,
+    searchLoading: loading,
+    setSearchLoading: setLoading,
+  } = useConfig();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const queryParam = searchParams.get("q") || "";
-  const [filterId, setFilterId] = useState(queryParam);
-  const [prevQueryParam, setPrevQueryParam] = useState(queryParam);
   const colsParam = searchParams.get("cols") || "";
   const [prevColsParam, setPrevColsParam] = useState(colsParam);
-
-  if (queryParam !== prevQueryParam) {
-    setPrevQueryParam(queryParam);
-    setFilterId(queryParam);
-  }
-
-  const getJiraSearchUrl = () => {
-    if (!jiraDomain || !filterId) return undefined;
-    const trimmed = filterId.trim();
-    if (!trimmed) return undefined;
-    const jql = /^\d+$/.test(trimmed) ? `filter=${trimmed}` : trimmed;
-    return `https://${jiraDomain}/issues/?jql=${encodeURIComponent(jql)}`;
-  };
-  const jiraUrl = getJiraSearchUrl();
 
   const [issues, setIssues] = useState<Issue[]>([]);
   const sortByParam = searchParams.get("sortBy") || "";
@@ -196,7 +188,6 @@ export const IssuesPage: React.FC = () => {
     setSearchParams(nextParams);
   };
 
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [expandedIssues, setExpandedIssues] = useState<Set<string>>(new Set());
@@ -792,8 +783,9 @@ export const IssuesPage: React.FC = () => {
     });
   };
 
-  const handleSearch = async (searchQuery?: string) => {
-    const activeQuery = searchQuery !== undefined ? searchQuery : filterId;
+  const handleSearch = async (searchQueryArg?: string) => {
+    const activeQuery =
+      searchQueryArg !== undefined ? searchQueryArg : searchQuery;
     if (!activeQuery) {
       setError("Please enter a Filter ID or JQL");
       return;
@@ -989,21 +981,6 @@ export const IssuesPage: React.FC = () => {
     }
   };
 
-  const performSearch = () => {
-    const trimmed = filterId.trim();
-    if (!trimmed) {
-      setError("Please enter a Filter ID or JQL");
-      return;
-    }
-    if (trimmed === queryParam) {
-      handleSearch(trimmed);
-    } else {
-      const nextParams = new URLSearchParams(searchParams);
-      nextParams.set("q", trimmed);
-      setSearchParams(nextParams);
-    }
-  };
-
   const copyTableAsRichText = () => {
     if (sortedIssues.length === 0) {
       setError("No issues to copy");
@@ -1121,12 +1098,23 @@ export const IssuesPage: React.FC = () => {
       });
   };
 
+  // Sync URL parameter 'q' to context 'searchQuery'
   React.useEffect(() => {
-    if (queryParam) {
-      handleSearch(queryParam);
+    if (queryParam !== searchQuery) {
+      setSearchQuery(queryParam);
+    }
+  }, [queryParam, searchQuery, setSearchQuery]);
+
+  // Trigger search when searchQuery (from context) or colsParam changes
+  React.useEffect(() => {
+    if (searchQuery) {
+      handleSearch(searchQuery);
+    } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIssues([]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [queryParam, colsParam]);
+  }, [searchQuery, colsParam]);
 
   const renderBlockerRows = (
     parentIssue: Issue,
@@ -1940,192 +1928,19 @@ export const IssuesPage: React.FC = () => {
         height: "100%",
       }}
     >
-      {/* Top Bar for Filter */}
+      {/* Table Actions and In-Memory Filter Toolbar */}
       <div
         className="card-panel"
         style={{
-          padding: "1rem",
+          padding: "0.75rem 1rem",
           display: "flex",
-          gap: "1rem",
+          justifyContent: "space-between",
           alignItems: "center",
+          gap: "1rem",
         }}
       >
-        <input
-          type="text"
-          className="input-field"
-          style={{
-            padding: "0.5rem 1rem",
-            flex: 1,
-            margin: 0,
-            height: "38px",
-            boxSizing: "border-box",
-          }}
-          placeholder="Enter Jira Filter ID or JQL (e.g. project = PROJ)"
-          value={filterId}
-          onChange={(e) => setFilterId(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && performSearch()}
-        />
-        <button
-          className="btn-primary"
-          style={{
-            padding: "0.5rem 1.5rem",
-            height: "38px",
-            boxSizing: "border-box",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-          onClick={performSearch}
-          disabled={loading}
-        >
-          {loading ? "Searching..." : "Search"}
-        </button>
-        <button
-          className="card-panel"
-          style={{
-            padding: "0.5rem 1.25rem",
-            display: "flex",
-            alignItems: "center",
-            gap: "0.5rem",
-            cursor: "pointer",
-            background: "#2a2f38",
-            border: "1px solid #3a3f48",
-            borderRadius: "6px",
-            color: "var(--text-primary)",
-            transition: "all var(--transition-fast)",
-            height: "38px",
-            boxSizing: "border-box",
-            margin: 0,
-          }}
-          onClick={() => copyTableAsRichText()}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "#2a4a4a";
-            e.currentTarget.style.borderColor = "var(--accent-secondary)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "#2a2f38";
-            e.currentTarget.style.borderColor = "#3a3f48";
-          }}
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M8 4v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4"></path>
-            <polyline points="16 4 12 4 12 12 16 12"></polyline>
-            <line x1="12" y1="12" x2="12" y2="20"></line>
-            <line x1="12" y1="20" x2="16" y2="20"></line>
-            <line x1="8" y1="20" x2="8" y2="12"></line>
-            <line x1="8" y1="12" x2="12" y2="12"></line>
-          </svg>
-          Copy as Table
-        </button>
-        <button
-          className="card-panel"
-          style={{
-            padding: "0.5rem 1.25rem",
-            display: "flex",
-            alignItems: "center",
-            gap: "0.5rem",
-            cursor: "pointer",
-            background: "#2a2f38",
-            border: "1px solid #3a3f48",
-            borderRadius: "6px",
-            color: "var(--text-primary)",
-            transition: "all var(--transition-fast)",
-            height: "38px",
-            boxSizing: "border-box",
-            margin: 0,
-          }}
-          onClick={() => setIsConfigOpen(true)}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "#2a4a4a";
-            e.currentTarget.style.borderColor = "var(--accent-secondary)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "#2a2f38";
-            e.currentTarget.style.borderColor = "#3a3f48";
-          }}
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M12 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-7m0-18H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h7m0-18v18"></path>
-          </svg>
-          Columns
-        </button>
-        <a
-          href={jiraUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="card-panel"
-          style={{
-            padding: "0.5rem 1.25rem",
-            display: "flex",
-            alignItems: "center",
-            gap: "0.5rem",
-            cursor: jiraUrl ? "pointer" : "not-allowed",
-            background: jiraUrl ? "#2a2f38" : "#151b24",
-            border: "1px solid #3a3f48",
-            borderRadius: "6px",
-            color: jiraUrl ? "var(--text-primary)" : "#4a4f58",
-            transition: "all var(--transition-fast)",
-            height: "38px",
-            boxSizing: "border-box",
-            margin: 0,
-            textDecoration: "none",
-            pointerEvents: jiraUrl ? "auto" : "none",
-          }}
-          onMouseEnter={(e) => {
-            if (jiraUrl) {
-              e.currentTarget.style.background = "#2a4a4a";
-              e.currentTarget.style.borderColor = "var(--accent-secondary)";
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (jiraUrl) {
-              e.currentTarget.style.background = "#2a2f38";
-              e.currentTarget.style.borderColor = "#3a3f48";
-            }
-          }}
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-            <polyline points="15 3 21 3 21 9"></polyline>
-            <line x1="10" y1="14" x2="21" y2="3"></line>
-          </svg>
-          Open in Jira
-        </a>
-        <div
-          style={{
-            height: "24px",
-            width: "1px",
-            background: "var(--border-color)",
-          }}
-        />
-        <div style={{ position: "relative", width: "250px" }}>
+        {/* Left side: Filter loaded rows */}
+        <div style={{ position: "relative", width: "300px" }}>
           <span
             style={{
               position: "absolute",
@@ -2206,6 +2021,99 @@ export const IssuesPage: React.FC = () => {
               </svg>
             </button>
           )}
+        </div>
+
+        {/* Right side: Action buttons */}
+        <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
+          <button
+            className="card-panel"
+            style={{
+              padding: "0.5rem 1.25rem",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              cursor: "pointer",
+              background: "#2a2f38",
+              border: "1px solid #3a3f48",
+              borderRadius: "6px",
+              color: "var(--text-primary)",
+              transition: "all var(--transition-fast)",
+              height: "38px",
+              boxSizing: "border-box",
+              margin: 0,
+              fontSize: "0.85rem",
+            }}
+            onClick={() => copyTableAsRichText()}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "#2a4a4a";
+              e.currentTarget.style.borderColor = "var(--accent-secondary)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "#2a2f38";
+              e.currentTarget.style.borderColor = "#3a3f48";
+            }}
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M8 4v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4"></path>
+              <polyline points="16 4 12 4 12 12 16 12"></polyline>
+              <line x1="12" y1="12" x2="12" y2="20"></line>
+              <line x1="12" y1="20" x2="16" y2="20"></line>
+              <line x1="8" y1="20" x2="8" y2="12"></line>
+              <line x1="8" y1="12" x2="12" y2="12"></line>
+            </svg>
+            Copy as Table
+          </button>
+          <button
+            className="card-panel"
+            style={{
+              padding: "0.5rem 1.25rem",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              cursor: "pointer",
+              background: "#2a2f38",
+              border: "1px solid #3a3f48",
+              borderRadius: "6px",
+              color: "var(--text-primary)",
+              transition: "all var(--transition-fast)",
+              height: "38px",
+              boxSizing: "border-box",
+              margin: 0,
+              fontSize: "0.85rem",
+            }}
+            onClick={() => setIsConfigOpen(true)}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "#2a4a4a";
+              e.currentTarget.style.borderColor = "var(--accent-secondary)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "#2a2f38";
+              e.currentTarget.style.borderColor = "#3a3f48";
+            }}
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M12 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-7m0-18H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h7m0-18v18"></path>
+            </svg>
+            Columns
+          </button>
         </div>
       </div>
 
