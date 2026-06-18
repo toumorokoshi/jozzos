@@ -107,7 +107,6 @@ export const IssuesPage: React.FC = () => {
   const { apiKey, userEmail, jiraDomain } = useConfig();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [dismissedTokenAlert, setDismissedTokenAlert] = useState(false);
   const queryParam = searchParams.get("q") || "";
   const [filterId, setFilterId] = useState(queryParam);
   const [prevQueryParam, setPrevQueryParam] = useState(queryParam);
@@ -5309,7 +5308,7 @@ export const IssuesPage: React.FC = () => {
         </div>
       )}
       {/* API Token Not Specified Dialog */}
-      {!apiKey && !dismissedTokenAlert && (
+      {!apiKey && (
         <div
           style={{
             position: "fixed",
@@ -5368,45 +5367,21 @@ export const IssuesPage: React.FC = () => {
             <div
               style={{
                 display: "flex",
-                justifyContent: "flex-end",
-                gap: "1rem",
+                justifyContent: "center",
                 marginTop: "0.5rem",
               }}
             >
               <button
-                onClick={() => setDismissedTokenAlert(true)}
-                style={{
-                  padding: "0.6rem 1.25rem",
-                  background: "transparent",
-                  border: "1px solid var(--border-color)",
-                  borderRadius: "8px",
-                  color: "var(--text-secondary)",
-                  cursor: "pointer",
-                  fontSize: "0.85rem",
-                  fontWeight: "600",
-                  transition: "all var(--transition-fast)",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = "var(--text-primary)";
-                  e.currentTarget.style.color = "var(--text-primary)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = "var(--border-color)";
-                  e.currentTarget.style.color = "var(--text-secondary)";
-                }}
-              >
-                Dismiss
-              </button>
-              <button
                 onClick={() => navigate("/settings")}
                 style={{
-                  padding: "0.6rem 1.5rem",
+                  width: "100%",
+                  padding: "0.75rem 1.5rem",
                   background: "var(--accent-primary)",
                   border: "none",
                   borderRadius: "8px",
                   color: "var(--bg-primary)",
                   cursor: "pointer",
-                  fontSize: "0.85rem",
+                  fontSize: "0.9rem",
                   fontWeight: "600",
                   boxShadow: "0 0 10px rgba(102, 252, 241, 0.2)",
                   transition: "all var(--transition-fast)",
