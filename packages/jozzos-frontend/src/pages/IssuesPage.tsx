@@ -1929,15 +1929,16 @@ export const IssuesPage: React.FC = () => {
   };
 
   return (
-    <div
-      className="animate-fade-in"
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "1.5rem",
-        height: "100%",
-      }}
-    >
+    <>
+      <div
+        className="animate-fade-in"
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "1.5rem",
+          height: "100%",
+        }}
+      >
       {/* Table Actions and In-Memory Filter Toolbar */}
       <div
         className="card-panel"
@@ -3424,6 +3425,7 @@ export const IssuesPage: React.FC = () => {
           to { transform: translateX(0); }
         }
       `}</style>
+      </div>
 
       {/* Dismissable Lightbox for Issue Details */}
       {selectedIssue && (
@@ -5331,7 +5333,7 @@ export const IssuesPage: React.FC = () => {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 };
 
