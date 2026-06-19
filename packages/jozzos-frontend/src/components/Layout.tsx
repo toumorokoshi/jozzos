@@ -6,7 +6,7 @@ import {
   useLocation,
   useSearchParams,
 } from "react-router-dom";
-import { Menu, X, Settings, ListTodo } from "lucide-react";
+import { Menu, X, Settings, ListTodo, LayoutGrid } from "lucide-react";
 import { AboutJozzosContent } from "./AboutJozzosContent";
 import { useConfig } from "../context/ConfigContext";
 
@@ -38,15 +38,21 @@ export const Layout: React.FC = () => {
   const performSearch = () => {
     const trimmed = filterId.trim();
     setSearchQuery(trimmed);
-    if (location.pathname !== "/") {
-      navigate(`/?q=${encodeURIComponent(trimmed)}`);
+    const targetPath =
+      location.pathname === "/" || location.pathname === "/matrix"
+        ? location.pathname
+        : "/";
+
+    const nextParams = new URLSearchParams(searchParams);
+    if (trimmed) {
+      nextParams.set("q", trimmed);
     } else {
-      const nextParams = new URLSearchParams(searchParams);
-      if (trimmed) {
-        nextParams.set("q", trimmed);
-      } else {
-        nextParams.delete("q");
-      }
+      nextParams.delete("q");
+    }
+
+    if (location.pathname !== targetPath) {
+      navigate(`${targetPath}?${nextParams.toString()}`);
+    } else {
       setSearchParams(nextParams);
     }
   };
@@ -97,7 +103,7 @@ export const Layout: React.FC = () => {
 
         <nav style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
           <NavLink
-            to="/"
+            to={location.search ? `/${location.search}` : "/"}
             onClick={() => setSidebarOpen(false)}
             style={({ isActive }) => ({
               display: "flex",
@@ -114,6 +120,26 @@ export const Layout: React.FC = () => {
           >
             <ListTodo size={20} />
             Issues
+          </NavLink>
+
+          <NavLink
+            to={location.search ? `/matrix${location.search}` : "/matrix"}
+            onClick={() => setSidebarOpen(false)}
+            style={({ isActive }) => ({
+              display: "flex",
+              alignItems: "center",
+              gap: "0.75rem",
+              padding: "0.75rem 1rem",
+              borderRadius: "8px",
+              textDecoration: "none",
+              color: isActive ? "var(--bg-primary)" : "var(--text-primary)",
+              background: isActive ? "var(--accent-primary)" : "transparent",
+              fontWeight: isActive ? "600" : "400",
+              transition: "all var(--transition-fast)",
+            })}
+          >
+            <LayoutGrid size={20} />
+            Matrix View
           </NavLink>
 
           <NavLink
