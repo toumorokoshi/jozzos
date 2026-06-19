@@ -72,6 +72,8 @@ export const MatrixPage: React.FC = () => {
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
   const [fields, setFields] =
     useState<{ id: string; name: string }[]>(STANDARD_FIELDS);
   const [fieldsLoading, setFieldsLoading] = useState(false);
@@ -430,6 +432,83 @@ export const MatrixPage: React.FC = () => {
     fetchIssues(searchQuery);
   };
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setSelectedIssue(null);
+      }
+    };
+    if (selectedIssue) {
+      window.addEventListener("keydown", handleKeyDown);
+    }
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [selectedIssue]);
+
+  const escapeHtml = (unsafe: string): string => {
+    return unsafe
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  };
+
+  const copyIssueWithBlockers = (issue: Issue) => {
+    const collectIssues = (currentIssue: Issue): Issue[] => {
+      const issuesList: Issue[] = [currentIssue];
+      if (currentIssue.blockedBy) {
+        currentIssue.blockedBy.forEach((blocker) => {
+          issuesList.push(blocker);
+          if (blocker.blockedBy) {
+            blocker.blockedBy.forEach((nestedBlocker) => {
+              issuesList.push(nestedBlocker);
+            });
+          }
+        });
+      }
+      if (currentIssue.blockingIssues) {
+        currentIssue.blockingIssues.forEach((blockingIssue) => {
+          issuesList.push(blockingIssue);
+        });
+      }
+      return issuesList;
+    };
+
+    const allIssues = collectIssues(issue);
+    if (allIssues.length === 0) {
+      setError("No issues to copy");
+      return;
+    }
+
+    let htmlContent = `<!DOCTYPE html><table style="border-collapse: collapse; width: 100%;"><thead><tr><th style="border: 1px solid #666; padding: 8px; background: #333; color: #fff;">Key</th><th style="border: 1px solid #666; padding: 8px; background: #333; color: #fff;">Summary</th><th style="border: 1px solid #666; padding: 8px; background: #333; color: #fff;">Assignee</th></tr></thead><tbody>`;
+    allIssues.forEach((item) => {
+      const key = item.key || "";
+      const summary = item.summary || "";
+      const assignee = item.assignee || "-";
+      htmlContent += `<tr><td style="border: 1px solid #666; padding: 8px;"><a href="${item.url}" style="color: #66bb6a; text-decoration: none;">${escapeHtml(key)}</a></td><td style="border: 1px solid #666; padding: 8px;">${escapeHtml(summary)}</td><td style="border: 1px solid #666; padding: 8px;">${escapeHtml(assignee)}</td></tr>`;
+    });
+    htmlContent += "</tbody></table>";
+
+    const blob = new Blob([htmlContent], { type: "text/html" });
+    const data = [new ClipboardItem({ "text/html": blob })];
+
+    navigator.clipboard
+      .write(data)
+      .then(() => {
+        setError(null);
+        setSuccess(`Copied ${allIssues.length} issue(s) to clipboard!`);
+        setTimeout(() => {
+          setSuccess(null);
+        }, 2000);
+      })
+      .catch((err) => {
+        console.error("Failed to copy issue:", err);
+        setError("Failed to copy issue to clipboard");
+      });
+  };
+
   return (
     <div
       style={{
@@ -606,6 +685,24 @@ export const MatrixPage: React.FC = () => {
         >
           <AlertTriangle size={20} />
           <div style={{ flex: 1, fontSize: "0.9rem" }}>{error}</div>
+        </div>
+      )}
+
+      {/* Success alert */}
+      {success && (
+        <div
+          style={{
+            background: "rgba(102, 252, 241, 0.1)",
+            color: "var(--accent-secondary)",
+            border: "1px solid rgba(102, 252, 241, 0.25)",
+            borderRadius: "12px",
+            padding: "1rem",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.75rem",
+          }}
+        >
+          <div style={{ flex: 1, fontSize: "0.9rem" }}>{success}</div>
         </div>
       )}
 
@@ -787,6 +884,10 @@ export const MatrixPage: React.FC = () => {
                           draggable={!isUpdating}
                           onDragStart={(e) => handleDragStart(e, issue.id)}
                           onDragEnd={handleDragEnd}
+                          onClick={() => {
+                            if (isUpdating || isDragging) return;
+                            setSelectedIssue(issue);
+                          }}
                           style={{
                             background: "var(--bg-primary)",
                             border: isDragging
@@ -955,6 +1056,988 @@ export const MatrixPage: React.FC = () => {
             );
           })}
       </div>
+
+      {/* Dismissable Lightbox for Issue Details */}
+      {selectedIssue && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            backgroundColor: "rgba(0, 0, 0, 0.75)",
+            backdropFilter: "blur(4px)",
+            zIndex: 1000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "2rem",
+            boxSizing: "border-box",
+            animation: "modalFadeIn 0.3s ease-out forwards",
+          }}
+          onClick={() => setSelectedIssue(null)}
+        >
+          <div
+            style={{
+              background: "var(--bg-secondary)",
+              border: "1px solid var(--border-color)",
+              borderRadius: "16px",
+              boxShadow: "0 20px 50px rgba(0, 0, 0, 0.6)",
+              width: "95vw",
+              maxWidth: "1350px",
+              maxHeight: "90vh",
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+              animation: "modalScaleUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Lightbox Header */}
+            <div
+              style={{
+                padding: "1.5rem",
+                borderBottom: "1px solid var(--border-color)",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                background: "var(--bg-primary)",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.5rem",
+                  flex: 1,
+                  minWidth: 0,
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.75rem",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <span
+                    style={{
+                      background: "rgba(102, 252, 241, 0.1)",
+                      color: "var(--accent-secondary)",
+                      padding: "0.2rem 0.6rem",
+                      borderRadius: "4px",
+                      fontSize: "0.8rem",
+                      fontWeight: "600",
+                      letterSpacing: "0.05em",
+                      border: "1px solid rgba(102, 252, 241, 0.25)",
+                    }}
+                  >
+                    {selectedIssue.key}
+                  </span>
+                  <a
+                    href={selectedIssue.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      color: "var(--accent-secondary)",
+                      textDecoration: "none",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      fontSize: "0.8rem",
+                      transition: "opacity 0.2s",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.8")}
+                    onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+                  >
+                    Open in Jira
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                      <polyline points="15 3 21 3 21 9"></polyline>
+                      <line x1="10" y1="14" x2="21" y2="3"></line>
+                    </svg>
+                  </a>
+                </div>
+                <h2
+                  style={{
+                    fontSize: "1.5rem",
+                    color: "var(--text-primary)",
+                    margin: 0,
+                    fontWeight: "600",
+                  }}
+                >
+                  {selectedIssue.summary}
+                </h2>
+                <button
+                  className="card-panel"
+                  style={{
+                    padding: "0.4rem 1rem",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    cursor: "pointer",
+                    background: "var(--btn-secondary-bg)",
+                    border: "1px solid var(--btn-secondary-border)",
+                    borderRadius: "6px",
+                    color: "var(--text-primary)",
+                    transition: "all var(--transition-fast)",
+                    fontSize: "0.85rem",
+                    height: "36px",
+                    boxSizing: "border-box",
+                    margin: 0,
+                    alignSelf: "flex-start",
+                  }}
+                  onClick={() => copyIssueWithBlockers(selectedIssue)}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "var(--btn-secondary-hover-bg)";
+                    e.currentTarget.style.borderColor = "var(--accent-secondary)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "var(--btn-secondary-bg)";
+                    e.currentTarget.style.borderColor = "var(--btn-secondary-border)";
+                  }}
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M8 4v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4"></path>
+                    <polyline points="16 4 12 4 12 12 16 12"></polyline>
+                    <line x1="12" y1="12" x2="12" y2="20"></line>
+                    <line x1="12" y1="20" x2="16" y2="20"></line>
+                    <line x1="8" y1="20" x2="8" y2="12"></line>
+                    <line x1="8" y1="12" x2="12" y2="12"></line>
+                  </svg>
+                  Copy issue with blockers
+                </button>
+              </div>
+              <button
+                onClick={() => setSelectedIssue(null)}
+                aria-label="Close details"
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "var(--text-secondary)",
+                  cursor: "pointer",
+                  padding: "8px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: "50%",
+                  transition: "all var(--transition-fast)",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "var(--btn-secondary-hover-bg)";
+                  e.currentTarget.style.color = "var(--text-primary)";
+                  e.currentTarget.style.transform = "rotate(90deg)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "none";
+                  e.currentTarget.style.color = "var(--text-secondary)";
+                  e.currentTarget.style.transform = "rotate(0deg)";
+                }}
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+
+            {/* Lightbox Content Body */}
+            <div
+              style={{
+                padding: "1.5rem",
+                overflowY: "auto",
+                display: "grid",
+                gridTemplateColumns: "1fr 300px",
+                gap: "2rem",
+                flex: 1,
+              }}
+            >
+              {/* Main Details (Left Side) */}
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "1.5rem",
+                }}
+              >
+                {/* Blocked Alert Banner */}
+                {selectedIssue.blockedBy &&
+                  selectedIssue.blockedBy.filter((b) => !isStatusClosed(b.status)).length > 0 && (
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.75rem",
+                        background: "rgba(255, 107, 107, 0.1)",
+                        border: "1px solid rgba(255, 107, 107, 0.25)",
+                        borderRadius: "8px",
+                        padding: "0.75rem 1rem",
+                        color: "var(--status-active-color)",
+                      }}
+                    >
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        style={{ flexShrink: 0 }}
+                      >
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                      </svg>
+                      <div style={{ fontSize: "0.85rem", lineHeight: "1.4" }}>
+                        <strong>Blocked:</strong> This issue is blocked by{" "}
+                        {selectedIssue.blockedBy
+                          .filter((b) => !isStatusClosed(b.status))
+                          .map((blocker, idx) => (
+                            <React.Fragment key={blocker.id}>
+                              {idx > 0 && ", "}
+                              <a
+                                href={blocker.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  color: "var(--color-error)",
+                                  fontWeight: "600",
+                                  textDecoration: "none",
+                                  borderBottom: "1px dashed rgba(255, 107, 107, 0.4)",
+                                }}
+                              >
+                                {blocker.key}
+                              </a>
+                            </React.Fragment>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+
+                {/* Dependencies Section */}
+                {((selectedIssue.blockedBy && selectedIssue.blockedBy.length > 0) ||
+                  (selectedIssue.blocks && selectedIssue.blocks.length > 0)) && (
+                  <div
+                    style={{
+                      marginTop: "0.5rem",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "1.5rem",
+                    }}
+                  >
+                    <h3
+                      style={{
+                        fontSize: "0.85rem",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                        color: "var(--text-secondary)",
+                        marginBottom: "0.5rem",
+                        borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
+                        paddingBottom: "0.25rem",
+                      }}
+                    >
+                      Issue Dependencies
+                    </h3>
+
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+                        gap: "1.5rem",
+                      }}
+                    >
+                      {/* Blocked By Column */}
+                      <div>
+                        <h4
+                          style={{
+                            fontSize: "0.8rem",
+                            fontWeight: "600",
+                            color: "var(--color-error)",
+                            marginBottom: "0.75rem",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px",
+                          }}
+                        >
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                          </svg>
+                          Blocked By ({selectedIssue.blockedBy?.filter((b) => !isStatusClosed(b.status)).length || 0})
+                        </h4>
+
+                        {selectedIssue.blockedBy &&
+                        selectedIssue.blockedBy.filter((b) => !isStatusClosed(b.status)).length > 0 ? (
+                          <div
+                            style={{
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: "0.5rem",
+                            }}
+                          >
+                            {selectedIssue.blockedBy
+                              .filter((b) => !isStatusClosed(b.status))
+                              .map((dep) => (
+                                <div
+                                  key={dep.id}
+                                  style={{
+                                    background: "var(--dependency-active-bg)",
+                                    border: "1px solid var(--dependency-active-border)",
+                                    borderRadius: "8px",
+                                    padding: "0.75rem",
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                    alignItems: "center",
+                                    gap: "1rem",
+                                    transition: "background 0.2s, border-color 0.2s",
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.background = "var(--dependency-active-hover-bg)";
+                                    e.currentTarget.style.borderColor = "var(--dependency-active-hover-border)";
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.background = "var(--dependency-active-bg)";
+                                    e.currentTarget.style.borderColor = "var(--dependency-active-border)";
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: "0.75rem",
+                                      flex: 1,
+                                      minWidth: 0,
+                                    }}
+                                  >
+                                    <a
+                                      href={dep.url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      style={{
+                                        color: "var(--color-error)",
+                                        textDecoration: "none",
+                                        fontSize: "0.85rem",
+                                        fontWeight: "600",
+                                        whiteSpace: "nowrap",
+                                      }}
+                                    >
+                                      {dep.key}
+                                    </a>
+                                    <span
+                                      style={{
+                                        color: "var(--text-primary)",
+                                        fontSize: "0.85rem",
+                                        overflow: "hidden",
+                                        textOverflow: "ellipsis",
+                                        whiteSpace: "nowrap",
+                                      }}
+                                    >
+                                      {dep.summary}
+                                    </span>
+                                  </div>
+                                  <span
+                                    style={{
+                                      background: "rgba(255, 107, 107, 0.15)",
+                                      color: "var(--status-active-color)",
+                                      padding: "0.15rem 0.45rem",
+                                      borderRadius: "4px",
+                                      fontSize: "0.7rem",
+                                      fontWeight: "700",
+                                      whiteSpace: "nowrap",
+                                    }}
+                                  >
+                                    {dep.status}
+                                  </span>
+                                </div>
+                              ))}
+                          </div>
+                        ) : (
+                          <div
+                            style={{
+                              color: "var(--text-secondary)",
+                              fontStyle: "italic",
+                              fontSize: "0.85rem",
+                              padding: "0.5rem 0",
+                            }}
+                          >
+                            No blockers.
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Blocks Column */}
+                      <div>
+                        <h4
+                          style={{
+                            fontSize: "0.8rem",
+                            fontWeight: "600",
+                            color: "var(--color-info)",
+                            marginBottom: "0.75rem",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px",
+                          }}
+                        >
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                            <path d="M7 11V7a5 5 0 0 1 9.9-1"></path>
+                          </svg>
+                          Blocks ({selectedIssue.blocks?.length || 0})
+                        </h4>
+
+                        {selectedIssue.blocks && selectedIssue.blocks.length > 0 ? (
+                          <div
+                            style={{
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: "0.5rem",
+                            }}
+                          >
+                            {selectedIssue.blocks.map((dep) => (
+                              <div
+                                key={dep.id}
+                                style={{
+                                  background: "var(--dependency-blocks-bg)",
+                                  border: "1px solid var(--dependency-blocks-border)",
+                                  borderRadius: "8px",
+                                  padding: "0.75rem",
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "center",
+                                  gap: "1rem",
+                                  transition: "background 0.2s, border-color 0.2s",
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.background = "var(--dependency-blocks-hover-bg)";
+                                  e.currentTarget.style.borderColor = "var(--dependency-blocks-hover-border)";
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.background = "var(--dependency-blocks-bg)";
+                                  e.currentTarget.style.borderColor = "var(--dependency-blocks-border)";
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "0.75rem",
+                                    flex: 1,
+                                    minWidth: 0,
+                                  }}
+                                >
+                                  <a
+                                    href={dep.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{
+                                      color: "var(--accent-secondary)",
+                                      textDecoration: "none",
+                                      fontSize: "0.85rem",
+                                      fontWeight: "600",
+                                      whiteSpace: "nowrap",
+                                    }}
+                                  >
+                                    {dep.key}
+                                  </a>
+                                  <span
+                                    style={{
+                                      color: "var(--text-primary)",
+                                      fontSize: "0.85rem",
+                                      overflow: "hidden",
+                                      textOverflow: "ellipsis",
+                                      whiteSpace: "nowrap",
+                                    }}
+                                  >
+                                    {dep.summary}
+                                  </span>
+                                </div>
+                                <span
+                                  style={{
+                                    background: "rgba(102, 252, 241, 0.15)",
+                                    color: "var(--accent-secondary)",
+                                    padding: "0.15rem 0.45rem",
+                                    borderRadius: "4px",
+                                    fontSize: "0.7rem",
+                                    fontWeight: "700",
+                                    whiteSpace: "nowrap",
+                                  }}
+                                >
+                                  {dep.status}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div
+                            style={{
+                              color: "var(--text-secondary)",
+                              fontStyle: "italic",
+                              fontSize: "0.85rem",
+                              padding: "0.5rem 0",
+                            }}
+                          >
+                            Does not block any issues.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Description */}
+                <div>
+                  <h3
+                    style={{
+                      fontSize: "0.85rem",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                      color: "var(--text-secondary)",
+                      marginBottom: "0.5rem",
+                      borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
+                      paddingBottom: "0.25rem",
+                    }}
+                  >
+                    Description
+                  </h3>
+                  <div
+                    style={{
+                      color: "var(--text-primary)",
+                      fontSize: "0.95rem",
+                      lineHeight: "1.6",
+                    }}
+                  >
+                    {selectedIssue.description ? (
+                      renderADFContent(selectedIssue.description)
+                    ) : (
+                      <span style={{ color: "var(--text-secondary)", fontStyle: "italic" }}>
+                        No description provided.
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Sidebar (Right Side) */}
+              <div
+                style={{
+                  borderLeft: "1px solid var(--border-color)",
+                  paddingLeft: "1.5rem",
+                  marginLeft: "-0.5rem",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "1.25rem",
+                }}
+              >
+                {/* Status */}
+                <div>
+                  <span
+                    style={{
+                      display: "block",
+                      fontSize: "0.75rem",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                      color: "var(--text-secondary)",
+                      marginBottom: "0.35rem",
+                    }}
+                  >
+                    Status
+                  </span>
+                  <span
+                    style={{
+                      background: "var(--accent-primary)",
+                      color: "var(--bg-primary)",
+                      padding: "0.25rem 0.75rem",
+                      borderRadius: "4px",
+                      fontSize: "0.85rem",
+                      fontWeight: "700",
+                      display: "inline-block",
+                      boxShadow: "0 2px 10px rgba(69, 162, 158, 0.2)",
+                    }}
+                  >
+                    {selectedIssue.status}
+                  </span>
+                </div>
+
+                {/* Priority */}
+                <div>
+                  <span
+                    style={{
+                      display: "block",
+                      fontSize: "0.75rem",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                      color: "var(--text-secondary)",
+                      marginBottom: "0.35rem",
+                    }}
+                  >
+                    Priority
+                  </span>
+                  <span
+                    style={{
+                      color: "var(--text-primary)",
+                      fontSize: "0.95rem",
+                      fontWeight: "500",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                    }}
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="var(--accent-secondary)"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                    </svg>
+                    {selectedIssue.priority || "Medium"}
+                  </span>
+                </div>
+
+                {/* Assignee */}
+                <div>
+                  <span
+                    style={{
+                      display: "block",
+                      fontSize: "0.75rem",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                      color: "var(--text-secondary)",
+                      marginBottom: "0.35rem",
+                    }}
+                  >
+                    Assignee
+                  </span>
+                  <span
+                    style={{
+                      color: "var(--text-primary)",
+                      fontSize: "0.95rem",
+                      fontWeight: "500",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "8px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: "24px",
+                        height: "24px",
+                        borderRadius: "50%",
+                        background: "rgba(102, 252, 241, 0.15)",
+                        color: "var(--accent-secondary)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "0.75rem",
+                        fontWeight: "600",
+                        border: "1px solid rgba(102, 252, 241, 0.3)",
+                      }}
+                    >
+                      {selectedIssue.assignee ? selectedIssue.assignee.charAt(0) : "?"}
+                    </div>
+                    {selectedIssue.assignee || "Unassigned"}
+                  </span>
+                </div>
+
+                {/* Reporter */}
+                <div>
+                  <span
+                    style={{
+                      display: "block",
+                      fontSize: "0.75rem",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                      color: "var(--text-secondary)",
+                      marginBottom: "0.35rem",
+                    }}
+                  >
+                    Reporter
+                  </span>
+                  <span
+                    style={{
+                      color: "var(--text-primary)",
+                      fontSize: "0.95rem",
+                      fontWeight: "500",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "8px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: "24px",
+                        height: "24px",
+                        borderRadius: "50%",
+                        background: "rgba(255, 255, 255, 0.05)",
+                        color: "var(--text-secondary)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "0.75rem",
+                        fontWeight: "600",
+                        border: "1px solid var(--border-color)",
+                      }}
+                    >
+                      {selectedIssue.reporter ? selectedIssue.reporter.charAt(0) : "?"}
+                    </div>
+                    {selectedIssue.reporter || "-"}
+                  </span>
+                </div>
+
+                {/* Dates */}
+                <div
+                  style={{
+                    marginTop: "1.5rem",
+                    paddingTop: "1rem",
+                    borderTop: "1px solid var(--border-color)",
+                  }}
+                >
+                  <div style={{ marginBottom: "0.75rem" }}>
+                    <span
+                      style={{
+                        display: "block",
+                        fontSize: "0.7rem",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                        color: "var(--text-secondary)",
+                        marginBottom: "0.2rem",
+                      }}
+                    >
+                      Created
+                    </span>
+                    <span
+                      style={{
+                        color: "var(--text-secondary)",
+                        fontSize: "0.8rem",
+                      }}
+                    >
+                      {formatDate(selectedIssue.created)}
+                    </span>
+                  </div>
+                  <div>
+                    <span
+                      style={{
+                        display: "block",
+                        fontSize: "0.7rem",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                        color: "var(--text-secondary)",
+                        marginBottom: "0.2rem",
+                      }}
+                    >
+                      Updated
+                    </span>
+                    <span
+                      style={{
+                        color: "var(--text-secondary)",
+                        fontSize: "0.8rem",
+                      }}
+                    >
+                      {formatDate(selectedIssue.updated)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes modalFadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes modalScaleUp {
+          from {
+            opacity: 0;
+            transform: scale(0.95) translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+          }
+        }
+      `}</style>
     </div>
   );
+};
+
+interface ADFNode {
+  type?: string;
+  text?: string;
+  content?: ADFNode[];
+  marks?: Array<{ type: string; attrs?: Record<string, string> }>;
+  attrs?: { level?: number };
+}
+
+const renderADFContent = (doc: ADFNode | unknown): React.ReactNode => {
+  if (!doc) return null;
+  if (typeof doc === "string") return <span>{doc}</span>;
+
+  const node = doc as ADFNode;
+  if (node.type === "text") {
+    let element: React.ReactNode = node.text || "";
+    if (node.marks) {
+      for (const mark of node.marks) {
+        if (mark.type === "strong") element = <strong>{element}</strong>;
+        if (mark.type === "em") element = <em>{element}</em>;
+        if (mark.type === "strike") element = <del>{element}</del>;
+        if (mark.type === "underline")
+          element = <u style={{ textDecoration: "underline" }}>{element}</u>;
+        if (mark.type === "code") {
+          element = (
+            <code
+              style={{
+                background: "rgba(255, 255, 255, 0.1)",
+                padding: "2px 6px",
+                borderRadius: "4px",
+                fontFamily: "monospace",
+                fontSize: "0.9em",
+              }}
+            >
+              {element}
+            </code>
+          );
+        }
+      }
+    }
+    return element;
+  }
+  if (node.content && Array.isArray(node.content)) {
+    const children = node.content.map((child: ADFNode, idx: number) => (
+      <React.Fragment key={idx}>{renderADFContent(child)}</React.Fragment>
+    ));
+
+    switch (node.type) {
+      case "paragraph":
+        return (
+          <p style={{ margin: "0.5rem 0", lineHeight: "1.5" }}>{children}</p>
+        );
+      case "heading": {
+        const Level = `h${node.attrs?.level || 3}`;
+        const headingStyles: React.CSSProperties = {
+          margin: "1.25rem 0 0.5rem",
+          fontWeight: "600",
+          color: "var(--text-primary)",
+        };
+        return React.createElement(Level, { style: headingStyles }, children);
+      }
+      case "bulletList":
+        return (
+          <ul style={{ paddingLeft: "1.25rem", margin: "0.5rem 0" }}>
+            {children}
+          </ul>
+        );
+      case "orderedList":
+        return (
+          <ol style={{ paddingLeft: "1.25rem", margin: "0.5rem 0" }}>
+            {children}
+          </ol>
+        );
+      case "listItem":
+        return <li style={{ marginBottom: "0.25rem" }}>{children}</li>;
+      case "codeBlock":
+        return (
+          <pre
+            style={{
+              background: "rgba(0, 0, 0, 0.3)",
+              padding: "0.75rem 1rem",
+              borderRadius: "8px",
+              overflowX: "auto",
+              fontFamily: "monospace",
+              border: "1px solid var(--border-color)",
+              margin: "0.75rem 0",
+            }}
+          >
+            <code>{children}</code>
+          </pre>
+        );
+      case "blockquote":
+        return (
+          <blockquote
+            style={{
+              borderLeft: "4px solid var(--accent-secondary)",
+              paddingLeft: "1rem",
+              margin: "0.75rem 0",
+              color: "var(--text-secondary)",
+              fontStyle: "italic",
+            }}
+          >
+            {children}
+          </blockquote>
+        );
+      default:
+        return children;
+    }
+  }
+  return null;
+};
+
+const formatDate = (dateString?: string) => {
+  if (!dateString) return "-";
+  try {
+    const d = new Date(dateString);
+    return d.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return dateString;
+  }
 };
