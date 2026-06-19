@@ -11,3 +11,7 @@ All field are using as column, including custom fields in the case of Jira.
 Using that matrix_field, a column is shown for every possible value of that field within the issues that matched the query. The columns are sorted alphanumerically, left to right.
 
 Each column then contains the issues whose custom field match that column value.
+
+## Drag and drop
+
+The user should be able to drag and drop the item into a separate column, changing the field on issue to the top column.
